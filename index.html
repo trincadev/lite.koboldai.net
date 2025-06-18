@@ -14076,7 +14076,7 @@ Current version indicated by LITEVER below.
 		render_gametext(false);
         /* My Ghost Writer: this will parse again the text because of edit mode toggle */
         if (localsettings.wordsearch_enabled) {
-            trigger_wordsearch_candidates()
+            trigger_wordsearch_candidates(false)
         }
 	}
 	function exit_editmode()
@@ -22935,14 +22935,18 @@ Current version indicated by LITEVER below.
     }
 
     // --- Word Search UI and Logic ---
-    function trigger_wordsearch_candidates() {
+    function trigger_wordsearch_candidates(renderGametext=true) {
+		if (renderGametext) {
+			// workaround to avoid disappearing results after click on urls/divs returned by trigger_wordsearch_results()
+			// but only if not because it's changing the editable mode
+			render_gametext(false);
+		}
         const searchBox = document.getElementById("wordsearch_input");
         const resultsContainer = document.getElementById("wordsearch_results");
         const sortByFreq = document.getElementById("wordsearch_sort").value === "0";
         const query = searchBox.value.trim();
         // Stem each word in the query
         const WORD_REGEX = getBestWordRegex()
-        console.error("trigger_wordsearch_candidates::WORD_REGEX:", WORD_REGEX.lastIndex, "#")
         const queryWords = (query.match(WORD_REGEX) || []).map(normalizeAndStem);
         resultsContainer.innerHTML = "";
 
@@ -22950,7 +22954,6 @@ Current version indicated by LITEVER below.
         // const wordIndex = buildWordIndex();
         const maxNgram = 3;
         // const ngramCounts = getNgramCountsFromIndex(wordIndex, maxNgram);
-        console.error("buildWordIndex WITHIN")
         const ngramCounts = getNgramCountsFromIndex(maxNgram);
 
         // Substring filter: match n-grams whose stem contains the query stem(s)
