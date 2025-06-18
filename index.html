@@ -22868,94 +22868,115 @@ Current version indicated by LITEVER below.
 	});
 
     /** Inspired by My Ghost Writer from trincadev - https://github.com/trincadev/my_ghost_writer */
-    // ES6-compatible regex for words with Latin letters (with diacritics), digits, apostrophes, hyphens, still to improve
+    function isES2018PlusCompatible() {
+        return typeof Promise !== "undefined" && typeof Promise.prototype.finally === "function"
+    }
+    function getBestWordRegex() {
+        // Improved regex: matches words with internal apostrophes/hyphens, not surrounded by spaces
+        const unicodeRegex = new RegExp(String.raw`\p{L}[\p{L}\p{N}'’\-–—]*|\p{N}[\p{N}'’\-–—]*`, 'gu');
+        const fallbackRegex = /\b[A-Za-z0-9]+(?:['’\-–—][A-Za-z0-9]+)*\b/g
+        return isES2018PlusCompatible() ? unicodeRegex : fallbackRegex
+    }
+    function normalizeWord(str) {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
     const underlinedClickedUrl = "background-border-clicked"
-    const WORD_REGEX = /[A-Za-zÀ-ÖØ-öø-ÿ0-9'-’]+/g;
+    // const WORD_REGEX = getBestWordRegex()
 
-    // N-gram parser: generates n-grams from an array of words
-    function ngramParser(words, n) {
-        const ngrams = {};
-        for (let i = 0; i <= words.length - n; i++) {
-            const ngram = words.slice(i, i + n).join(' ');
-            ngrams[ngram] = (ngrams[ngram] || 0) + 1;
-        }
-        return ngrams;
+    // Replace this with your actual stemmer implementation
+    function normalizeAndStem(word) {
+        return porterStemmer(normalizeWord(word));
     }
 
-    function prepare_candidates_from_text(query, textrows, maxNgram = 3, perLineLimit = 250) {
-        let candidateDict = {};
-        const querylc = query.toLowerCase();
+    // --- Word Indexing and N-gram Counting ---
+    function buildWordIndex() {
+        // Returns an array of arrays: one sub - array per text node
+        const wordIndex = [];
+        const gametext = document.getElementById("gametext");
+        const walker = document.createTreeWalker(gametext, NodeFilter.SHOW_TEXT, null, false);
+        let WORD_REGEX;
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            let match;
+            let nodeWords = [];
+            WORD_REGEX = getBestWordRegex()
+            while ((match = WORD_REGEX.exec(node.nodeValue)) !== null) {
+                nodeWords.push({
+                    word: match[0],
+                    stem: normalizeAndStem(match[0]),
+                    node: node,
+                    index: match.index
+                });
+            }
+            if (nodeWords.length > 0) {
+                wordIndex.push(nodeWords);
+            }
+        }
+        return wordIndex;
+    }
 
-        // For each line, generate n-grams and count
-        for (let l = 0; l < textrows.length; ++l) {
-            const line = textrows[l].toLowerCase();
-            const words = line.match(WORD_REGEX) || [];
-            for (let n = 1; n <= maxNgram; ++n) {
-                const ngrams = ngramParser(words, n);
-                // Sort and limit per line
-                const sortedNgrams = Object.entries(ngrams).sort((a, b) => b[1] - a[1]);
-                const lim = Math.min(sortedNgrams.length, perLineLimit);
-                for (let j = 0; j < lim; ++j) {
-                    const [ng, cnt] = sortedNgrams[j];
-                    // Include only n-grams that contain the query substring (case-insensitive, anywhere)
-                    if (querylc && !ng.includes(querylc)) continue;
-                    candidateDict[ng] = (candidateDict[ng] || 0) + cnt;
+    // Improved: group by stemmed n-gram, but keep all display variants and correct counts
+    // function getNgramCountsFromIndex(wordIndex, maxNgram = 3) {
+    function getNgramCountsFromIndex(maxNgram = 3) {
+        const wordIndex = buildWordIndex();
+        const ngramCounts = {};
+        for (const nodeWords of wordIndex) {
+            for (let n = 1; n <= maxNgram; n++) {
+                for (let i = 0; i <= nodeWords.length - n; i++) {
+                    const nodeWordsSliced = nodeWords.slice(i, i + n)
+                    const ngram = nodeWordsSliced.map(w => w.word).join(' ');
+                    const stemNgram = nodeWordsSliced.map(w => w.stem).join(' ');
+                    ngramCounts[stemNgram] = (ngramCounts[stemNgram] || {count: 0, display: ngram});
+                    ngramCounts[stemNgram].count += 1;
                 }
             }
         }
-        return candidateDict;
+        return ngramCounts;
     }
 
+    // --- Word Search UI and Logic ---
     function trigger_wordsearch_candidates() {
         const searchBox = document.getElementById("wordsearch_input");
         const resultsContainer = document.getElementById("wordsearch_results");
         const sortByFreq = document.getElementById("wordsearch_sort").value === "0";
-        const query = searchBox.value.trim().toLowerCase();
+        const query = searchBox.value.trim();
+        // Stem each word in the query
+        const WORD_REGEX = getBestWordRegex()
+        console.error("trigger_wordsearch_candidates::WORD_REGEX:", WORD_REGEX.lastIndex, "#")
+        const queryWords = (query.match(WORD_REGEX) || []).map(normalizeAndStem);
         resultsContainer.innerHTML = "";
 
-        // Get all text rows (lines/paragraphs)
-        const gametext = document.getElementById("gametext");
-        const textrows = Array.from(gametext.childNodes)
-            .filter(node => node.nodeType === Node.TEXT_NODE || node.nodeType === Node.ELEMENT_NODE)
-            .map(node => node.textContent);
-
-        // --- Efficient n-gram counting ---
+        // Build the word index from gametext
+        // const wordIndex = buildWordIndex();
         const maxNgram = 3;
-        const ngramCounts = {};
-        for (let l = 0; l < textrows.length; ++l) {
-            const line = textrows[l];
-            const words = (line.match(WORD_REGEX) || []);
-            for (let n = 1; n <= maxNgram; ++n) {
-                for (let i = 0; i <= words.length - n; i++) {
-                    // Lowercase the ngram for normalization, but keep apostrophes/hyphens
-                    const ngram = words.slice(i, i + n).join(' ').toLowerCase();
-                    ngramCounts[ngram] = (ngramCounts[ngram] || 0) + 1;
-                }
-            }
-        }
+        // const ngramCounts = getNgramCountsFromIndex(wordIndex, maxNgram);
+        console.error("buildWordIndex WITHIN")
+        const ngramCounts = getNgramCountsFromIndex(maxNgram);
 
-        // --- Substring Filter (case-insensitive, all n-grams are lowercase) ---
+        // Substring filter: match n-grams whose stem contains the query stem(s)
         let candidateItems = Object.entries(ngramCounts)
-            .filter(([ng, count]) => (!query || ng.includes(query)) && count > 0);
+            .filter(([ng, obj]) => (
+                queryWords.length === 0 ||
+                ng.includes(queryWords.join(' '))
+            ) && obj.count > 0);
 
-        // Sort
         if (sortByFreq) {
-            candidateItems.sort((a, b) => b[1] - a[1]);
+            candidateItems.sort((a, b) => b[1].count - a[1].count);
         } else {
-            candidateItems.sort((a, b) => a[0].localeCompare(b[0]));
+            candidateItems.sort((a, b) => a[1].display.localeCompare(b[1].display));
         }
 
         // Display results
         for (let i = 0; i < candidateItems.length; ++i) {
-            let key = candidateItems[i][0];
-            let count = candidateItems[i][1];
+            let key = candidateItems[i][1].display;
+            let count = candidateItems[i][1].count;
             const btn = document.createElement("div");
             btn.style.border = "1px solid #646464";
             btn.id = `id-div-candidate-${i}-nth`
             btn.setAttribute("aria-label", `id-div-candidate-${i}-nth`)
             btn.innerHTML = `<a href="#" id="id-a-candidate-${i}-nth" aria-label="id-a-candidate-${i}-nth">
-                <span class="color_wordsearch_surrounding" id="id-key-count-${i}-nth" aria-label="id-key-count-${i}-nth">${key} (${count})</span>
-            </a>`;
+                    <span class="color_wordsearch_surrounding" id="id-key-count-${i}-nth" aria-label="id-key-count-${i}-nth">${key} (${count})</span>
+                </a>`;
             let searchstr = key;
             btn.onclick = () => {
                 trigger_wordsearch_results(searchstr, i);
@@ -22976,6 +22997,7 @@ Current version indicated by LITEVER below.
         }
     }
 
+    // --- Scrolling and Selection Utilities ---
     function scrollToGivenPoint(editorElement, yClientOffset, negativeMultiplierFontSize = 3) {
         const editorComputedStyle = window.getComputedStyle(editorElement)
         const fontSize = parseInt(editorComputedStyle.getPropertyValue("font-size"), 10)
@@ -22984,7 +23006,7 @@ Current version indicated by LITEVER below.
         if (yClientOffset < (scrollHeight - negativeOffset)) {
             yClientOffset -= negativeOffset
         }
-        editorElement.scrollTo(0, yClientOffset, {behavior: "smooth" });
+        editorElement.scrollTo(0, yClientOffset, {behavior: "smooth"});
     }
     function getOffsetsWithElement(el) {
         return {top: el.offsetTop, height: el.offsetHeight}
@@ -23000,7 +23022,6 @@ Current version indicated by LITEVER below.
         const offsetsEditor = getOffsetsWithElement(editorElement)
         const yBase = offsetsEditor.top
         const height = offsetsEditor.height
-
         const {y} = getBoundingClientRect(range)
         // scroll to the top of the current viewport minus half the current visible height
         const yClientOffset = y - yBase - parseInt(height / 2)
@@ -23015,7 +23036,9 @@ Current version indicated by LITEVER below.
         resultsContainer.innerHTML = "";
         if (!query) return;
 
-        const queryWords = query.match(WORD_REGEX) || [];
+        // Stem each word in the query
+        const WORD_REGEX = getBestWordRegex()
+        const queryWords = (query.match(WORD_REGEX) || []).map(normalizeAndStem)
         if (queryWords.length === 0) return;
 
         // Helper: extract context for preview
@@ -23048,18 +23071,19 @@ Current version indicated by LITEVER below.
         function search_text_for_strings(queryWords) {
             let matchRanges = [];
             const walker = document.createTreeWalker(gametext, NodeFilter.SHOW_TEXT, null, false);
+            let WORD_REGEX;
             while (walker.nextNode()) {
                 const node = walker.currentNode;
                 const text = node.nodeValue;
                 let words = [];
                 let match;
+                WORD_REGEX = getBestWordRegex()
                 while ((match = WORD_REGEX.exec(text)) !== null) {
-                    words.push({ word: match[0], index: match.index });
+                    words.push({ word: match[0], stem: normalizeAndStem(match[0]), index: match.index });
                 }
                 for (let i = 0; i <= words.length - queryWords.length; i++) {
                     let windowWords = words.slice(i, i + queryWords.length);
-                    // Compare as lowercased, exact match
-                    if (windowWords.map(w => w.word.toLowerCase()).join(' ') === queryWords.map(w => w.toLowerCase()).join(' ')) {
+                    if (windowWords.map(w => w.stem).join(' ') === queryWords.join(' ')) {
                         const startIdx = windowWords[0].index;
                         const endIdx = windowWords[windowWords.length - 1].index + windowWords[windowWords.length - 1].word.length;
                         const range = document.createRange();
@@ -23085,10 +23109,10 @@ Current version indicated by LITEVER below.
             btn.setAttribute("aria-label", `id-div-${idParent}-range-${i}-nth`)
             let nearbytext = extract_surrounding_text(range, 8);
             btn.innerHTML = `<a href="#" id="id-${idParent}-range-${i}-nth" aria-label="id-${idParent}-range-${i}-nth">
-                <span id="id-${idParent}-wordsearch-result-before-${i}-nth" aria-label="id-${idParent}-wordsearch-result-before-${i}-nth" class="color_wordsearch_surrounding">${nearbytext.before}</span>
-                <span id="id-${idParent}-wordsearch-result-target-${i}-nth" aria-label="id-${idParent}-wordsearch-result-target-${i}-nth" class="color_wordsearch_target">${nearbytext.middle}</span>
-                <span id="id-${idParent}-wordsearch-result-after-${i}-nth" aria-label="id-${idParent}-wordsearch-result-after-${i}-nth" class="color_wordsearch_surrounding">${nearbytext.after}</span>
-            </a>`;
+                    <span id="id-${idParent}-wordsearch-result-before-${i}-nth" aria-label="id-${idParent}-wordsearch-result-before-${i}-nth" class="color_wordsearch_surrounding">${nearbytext.before}</span>
+                    <span id="id-${idParent}-wordsearch-result-target-${i}-nth" aria-label="id-${idParent}-wordsearch-result-target-${i}-nth" class="color_wordsearch_target">${nearbytext.middle}</span>
+                    <span id="id-${idParent}-wordsearch-result-after-${i}-nth" aria-label="id-${idParent}-wordsearch-result-after-${i}-nth" class="color_wordsearch_surrounding">${nearbytext.after}</span>
+                </a>`;
             btn.onclick = () => {
                 const sel = window.getSelection();
                 sel.removeAllRanges();
