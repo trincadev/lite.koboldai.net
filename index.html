@@ -22881,9 +22881,7 @@ Current version indicated by LITEVER below.
         return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     }
     const underlinedClickedUrl = "background-border-clicked"
-    // const WORD_REGEX = getBestWordRegex()
 
-    // Replace this with your actual stemmer implementation
     function normalizeAndStem(word) {
         return porterStemmer(normalizeWord(word));
     }
@@ -22916,7 +22914,6 @@ Current version indicated by LITEVER below.
     }
 
     // Improved: group by stemmed n-gram, but keep all display variants and correct counts
-    // function getNgramCountsFromIndex(wordIndex, maxNgram = 3) {
     function getNgramCountsFromIndex(maxNgram = 3) {
         const wordIndex = buildWordIndex();
         const ngramCounts = {};
@@ -22970,7 +22967,7 @@ Current version indicated by LITEVER below.
     function trigger_wordsearch_candidates(renderGametext=true) {
         if (renderGametext) {
             // workaround to avoid disappearing results after click on urls/divs returned by trigger_wordsearch_results()
-            // but only if not because it's changing the editable mode
+            // but only if not changing the editable mode
             render_gametext(false);
         }
         const searchBox = document.getElementById("wordsearch_input");
@@ -23092,7 +23089,7 @@ Current version indicated by LITEVER below.
             const before = textContent.slice(start, startOffset);
             const middle = textContent.slice(startOffset, endOffset);
             const after = textContent.slice(endOffset, end);
-            return {"before": before, "middle": middle, "after": after, "full": `${before}${middle}${after}`};
+            return {before, middle, after, "full": `${before}${middle}${after}`};
         }
 
         function removeClassById(oldClassName) {
