@@ -23138,8 +23138,8 @@ Current version indicated by LITEVER below.
             let nearbytext = extract_surrounding_text(range, 8);
             const btn = createBtnWordsearchResults(`id-div-${idParent}-range-${i}-nth`, `id-${idParent}-range-${i}-nth`, [
                     {idContent: `id-${idParent}-wordsearch-result-before-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.before}`},
-                    {idContent: `id-${parent}-wordsearch-result-target-${i}-nth`, cssClass: "color_wordsearch_target", textContent: `${nearbytext.middle}`},
-                    {idContent: `id-${parent}-wordsearch-result-after-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.after}`}
+                    {idContent: `id-${idParent}-wordsearch-result-target-${i}-nth`, cssClass: "color_wordsearch_target", textContent: `${nearbytext.middle}`},
+                    {idContent: `id-${idParent}-wordsearch-result-after-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.after}`}
                 ]
             )
             btn.onclick = () => {
