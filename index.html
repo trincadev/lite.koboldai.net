@@ -22968,11 +22968,11 @@ Current version indicated by LITEVER below.
 
     // --- Word Search UI and Logic ---
     function trigger_wordsearch_candidates(renderGametext=true) {
-		if (renderGametext) {
-			// workaround to avoid disappearing results after click on urls/divs returned by trigger_wordsearch_results()
-			// but only if not because it's changing the editable mode
-			render_gametext(false);
-		}
+        if (renderGametext) {
+            // workaround to avoid disappearing results after click on urls/divs returned by trigger_wordsearch_results()
+            // but only if not because it's changing the editable mode
+            render_gametext(false);
+        }
         const searchBox = document.getElementById("wordsearch_input");
         const resultsContainer = document.getElementById("wordsearch_results");
         const sortByFreq = document.getElementById("wordsearch_sort").value === "0";
@@ -22982,15 +22982,16 @@ Current version indicated by LITEVER below.
         const queryWords = (query.match(WORD_REGEX) || []).map(normalizeAndStem);
         resultsContainer.innerHTML = "";
 
-        // Build the word index from gametext
-        // const wordIndex = buildWordIndex();
         const maxNgram = 3;
-        // const ngramCounts = getNgramCountsFromIndex(wordIndex, maxNgram);
         const ngramCounts = getNgramCountsFromIndex(maxNgram);
+        // Filter and sort candidates
+        let candidateItems = filterAndSortCandidates(ngramCounts, queryWords, sortByFreq);
+        // Render results
+        renderWordsearchCandidates(candidateItems, resultsContainer);
+    }
 
-        // Substring filter: match n-grams whose stem contains the query stem(s)
-        let candidateItems = Object.entries(ngramCounts)
-            .filter(([ng, obj]) => (
+    function filterAndSortCandidates(ngramCounts, queryWords, sortByFreq) {
+        let candidateItems = Object.entries(ngramCounts).filter(([ng, obj]) => (
                 queryWords.length === 0 ||
                 ng.includes(queryWords.join(' '))
             ) && obj.count > 0);
@@ -23000,8 +23001,10 @@ Current version indicated by LITEVER below.
         } else {
             candidateItems.sort((a, b) => a[1].display.localeCompare(b[1].display));
         }
+        return candidateItems;
+    }
 
-        // Display results
+    function renderWordsearchCandidates(candidateItems, resultsContainer) {
         for (let i = 0; i < candidateItems.length; ++i) {
             let key = candidateItems[i][1].display;
             let count = candidateItems[i][1].count;
