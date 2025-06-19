@@ -22934,6 +22934,38 @@ Current version indicated by LITEVER below.
         return ngramCounts;
     }
 
+    function createContentSpan(idContent, cssClass, textContent) {
+        const contentResults = document.createElement("span");
+        contentResults.id = idContent;
+        contentResults.setAttribute("aria-label", idContent)
+        contentResults.classList.add(cssClass);
+        contentResults.textContent = textContent;
+        return contentResults;
+    }
+
+    function createBtnParent(idBtnParent, btnStyle = "1px solid #646464") {
+        const btn = document.createElement("div");
+        btn.style.border = btnStyle
+        btn.id = idBtnParent
+        btn.setAttribute("aria-label", idBtnParent)
+        return btn
+    }
+
+    function createBtnWordsearchResults(idBtnParent, idLink, objectContentsArray, btnStyle = "1px solid #646464") {
+        const btn = createBtnParent(idBtnParent, btnStyle)
+        const link = document.createElement("a");
+        link.href = "#";
+        link.id = idLink
+        link.setAttribute("aria-label", idLink)
+        objectContentsArray.forEach(objectContent => {
+            const {idContent, cssClass, textContent} = objectContent;
+            const contentSpan = createContentSpan(idContent, cssClass, textContent)
+            link.appendChild(contentSpan);
+        })
+        btn.appendChild(link);
+        return btn
+    }
+
     // --- Word Search UI and Logic ---
     function trigger_wordsearch_candidates(renderGametext=true) {
 		if (renderGametext) {
@@ -22973,13 +23005,10 @@ Current version indicated by LITEVER below.
         for (let i = 0; i < candidateItems.length; ++i) {
             let key = candidateItems[i][1].display;
             let count = candidateItems[i][1].count;
-            const btn = document.createElement("div");
-            btn.style.border = "1px solid #646464";
-            btn.id = `id-div-candidate-${i}-nth`
-            btn.setAttribute("aria-label", `id-div-candidate-${i}-nth`)
-            btn.innerHTML = `<a href="#" id="id-a-candidate-${i}-nth" aria-label="id-a-candidate-${i}-nth">
-                    <span class="color_wordsearch_surrounding" id="id-key-count-${i}-nth" aria-label="id-key-count-${i}-nth">${key} (${count})</span>
-                </a>`;
+            const btn = createBtnWordsearchResults(`id-div-candidate-${i}-nth`, `id-a-candidate-${i}-nth`, [
+                    {idContent: `id-key-count-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${key} (${count})`}
+                ]
+            )
             let searchstr = key;
             btn.onclick = () => {
                 trigger_wordsearch_results(searchstr, i);
@@ -23106,16 +23135,13 @@ Current version indicated by LITEVER below.
         topper.innerText = `${matchRanges.length} results`;
         resultsContainer.appendChild(topper);
         matchRanges.forEach(({ range, preview }, i) => {
-            const btn = document.createElement("div");
-            btn.style.border = "1px solid #646464";
-            btn.id = `id-div-${idParent}-range-${i}-nth`
-            btn.setAttribute("aria-label", `id-div-${idParent}-range-${i}-nth`)
             let nearbytext = extract_surrounding_text(range, 8);
-            btn.innerHTML = `<a href="#" id="id-${idParent}-range-${i}-nth" aria-label="id-${idParent}-range-${i}-nth">
-                    <span id="id-${idParent}-wordsearch-result-before-${i}-nth" aria-label="id-${idParent}-wordsearch-result-before-${i}-nth" class="color_wordsearch_surrounding">${nearbytext.before}</span>
-                    <span id="id-${idParent}-wordsearch-result-target-${i}-nth" aria-label="id-${idParent}-wordsearch-result-target-${i}-nth" class="color_wordsearch_target">${nearbytext.middle}</span>
-                    <span id="id-${idParent}-wordsearch-result-after-${i}-nth" aria-label="id-${idParent}-wordsearch-result-after-${i}-nth" class="color_wordsearch_surrounding">${nearbytext.after}</span>
-                </a>`;
+            const btn = createBtnWordsearchResults(`id-div-${idParent}-range-${i}-nth`, `id-${idParent}-range-${i}-nth`, [
+                    {idContent: `id-${idParent}-wordsearch-result-before-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.before}`},
+                    {idContent: `id-${parent}-wordsearch-result-target-${i}-nth`, cssClass: "color_wordsearch_target", textContent: `${nearbytext.middle}`},
+                    {idContent: `id-${parent}-wordsearch-result-after-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.after}`}
+                ]
+            )
             btn.onclick = () => {
                 const sel = window.getSelection();
                 sel.removeAllRanges();
