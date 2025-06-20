@@ -23158,7 +23158,7 @@ Current version indicated by LITEVER below.
         if (yClientOffset < (scrollHeight - negativeOffset)) {
             yClientOffset -= negativeOffset
         }
-        editorElement.scrollTo(0, yClientOffset, {behavior: "smooth"});
+        editorElement.scrollTo({top: yClientOffset, behavior: "smooth"});
     }
     function getOffsetsWithElement(el) {
         return {top: el.offsetTop, height: el.offsetHeight}
@@ -23169,7 +23169,7 @@ Current version indicated by LITEVER below.
     }
     function scrollToCaret(range, editorFieldLabel) {
         const editorElement = document.getElementById(editorFieldLabel)
-        editorElement.scrollTo(0, 0) // workaround: first reset the scroll position moving it at editorElement beginning
+        editorElement.scrollTo(0, 0) // workaround: first reset the scroll position moving it at editor Element beginning
         editorElement.focus();
         const offsetsEditor = getOffsetsWithElement(editorElement)
         const yBase = offsetsEditor.top
@@ -23248,14 +23248,25 @@ Current version indicated by LITEVER below.
             return matchRanges;
         }
 
-        let matchRanges = search_text_for_strings(queryWords);
+        function handleDefaultScroll(range) {
+            const span = document.createElement("span");
+            span.style.display = "inline";
+            span.style.background = "transparent";
+            span.id = "temp-scroll-target";
+            const tempRange = range.cloneRange();
+            tempRange.collapse(true);
+            tempRange.insertNode(span);
+            span.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => {
+                if (span.parentNode) span.parentNode.removeChild(span);
+            }, 500);
+        }
 
-        const topper = document.createElement("div");
-        topper.style.border = "1px solid #646464";
-        topper.innerText = `${matchRanges.length} results`;
-        resultsContainer.appendChild(topper);
-        matchRanges.forEach(({ range, preview }, i) => {
-            let nearbytext = extract_surrounding_text(range, 8);
+        function isSafari() {
+            return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        }
+
+        function createResultButton(nearbytext, range, idParent, i) {
             const btn = createBtnWordsearchResults(`id-div-${idParent}-range-${i}-nth`, `id-${idParent}-range-${i}-nth`, [
                     {idContent: `id-${idParent}-wordsearch-result-before-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.before}`},
                     {idContent: `id-${idParent}-wordsearch-result-target-${i}-nth`, cssClass: "color_wordsearch_target", textContent: `${nearbytext.middle}`},
@@ -23268,25 +23279,25 @@ Current version indicated by LITEVER below.
                 sel.addRange(range);
                 removeClassById(underlinedClickedUrl);
                 btn.className = underlinedClickedUrl;
-                function isSafari() {
-                    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-                }
                 if (isSafari()) {
-                    scrollToCaret(range, "gametext", sel);
+                    scrollToCaret(range, "gametext");
                 } else {
-                    const span = document.createElement("span");
-                    span.style.display = "inline";
-                    span.style.background = "transparent";
-                    span.id = "temp-scroll-target";
-                    const tempRange = range.cloneRange();
-                    tempRange.collapse(true);
-                    tempRange.insertNode(span);
-                    span.scrollIntoView({ behavior: "smooth", block: "center" });
-                    setTimeout(() => {
-                        if (span.parentNode) span.parentNode.removeChild(span);
-                    }, 500);
+                    handleDefaultScroll(range);
                 }
             };
+            return btn;
+        }
+
+        // Main logic
+        let matchRanges = search_text_for_strings(queryWords);
+
+        const topper = document.createElement("div");
+        topper.style.border = "1px solid #646464";
+        topper.innerText = `${matchRanges.length} results`;
+        resultsContainer.appendChild(topper);
+        matchRanges.forEach(({ range }, i) => {
+            let nearbytext = extract_surrounding_text(range, 8);
+            const btn = createResultButton(nearbytext, range, idParent, i);
             resultsContainer.appendChild(btn);
         });
     }
