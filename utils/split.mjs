@@ -1,8 +1,17 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import {copyFile, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
 
-import { makeAttribute, parse, serialize } from './parser.mjs';
+import {makeAttribute, makeString, parse, serialize} from './parser.mjs';
 
 /** @import * as t from './parser.mjs' */
+
+const cp = async (file, dest) => {
+	try {
+		await copyFile(file, `${dest}/${file}`);
+		console.log(`file '${file}' copied to the '${splitDir}' folder`);
+	} catch {
+		console.error(`The file '${file}' could not be copied to the '${splitDir}' folder.`);
+	}
+}
 
 // Input/output html file name.
 const htmlFile = process.argv[2] ?? 'index.html';
@@ -25,6 +34,37 @@ const head = htmlOrDoc.children.filter(node => node.type == 'element').find(node
 
 // Get the <body> tag, if any.
 const body = htmlOrDoc.children.filter(node => node.type == 'element').find(node => node.tagName == 'body');
+
+// Find and move the init-config script
+const initConfigScript = htmlOrDoc.children.find(node =>
+    node.type === 'element' &&
+    node.tagName === 'script' &&
+    node.attributes.some(attr => attr.type === 'attribute' && attr.name === 'id' && attr.value === 'init-config')
+);
+
+if (initConfigScript && head) {
+    // Remove the script from its current location
+    const scriptIndex = htmlOrDoc.children.indexOf(initConfigScript);
+    if (scriptIndex !== -1) {
+        htmlOrDoc.children.splice(scriptIndex, 1);
+    }
+
+    // Find the last meta tag in head
+    const lastMetaIndex = head.children.reduce((lastIndex, node, currentIndex) => {
+        if (node.type === 'element' && node.tagName === 'meta') {
+            return currentIndex;
+        }
+        return lastIndex;
+    }, -1);
+
+    // Insert after the last meta tag
+    if (lastMetaIndex !== -1) {
+        head.children.splice(lastMetaIndex + 1, 0, makeString('\n\t'), initConfigScript);
+    } else {
+        // If no meta tags found, insert at the beginning of head
+        head.children.unshift(initConfigScript, makeString('\n\t'));
+    }
+}
 
 /**
  * @param {t.Element} node
@@ -212,3 +252,8 @@ await outlineScriptAndStyleElems('3html', htmlOrDoc, { after: body });
 
 // Write the updated html file to the output directory.
 await writeFile(`${splitDir}/${htmlFile}`, serialize(document));
+
+// we need to copy sw.js and manifest.json to the splitDir folder because these files are missing within ./split/index
+['manifest.json', 'sw.js'].forEach(async file => {
+	await cp(file, splitDir)
+})
