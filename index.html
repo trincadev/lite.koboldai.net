@@ -23019,6 +23019,160 @@ Current version indicated by LITEVER below.
 		}
 	});
 
+    /* Thesaurus functionality */
+    async function getThesaurusData() {
+        const queryInput = document.getElementById("id-dialog-thesaurus-query")
+        const query = queryInput.value
+        if (!query || query === "") {
+            const msg = "Query cannot be empty!"
+            const error = showElementById("id-dialog-thesaurus-error")
+            error.textContent += " " + msg
+            throw new Error(msg)
+        }
+        console.log(`getThesaurusData::query:${query}!`);
+        const thesaurusDomainElement = document.getElementById("thesaurus_endpoint")
+        const thesaurusDomain = thesaurusDomainElement.value || "http://localhost:7860"
+
+        const url = `${thesaurusDomain}/thesaurus-wordsapi`;
+        try {
+            showElementById("id-dialog-thesaurus-waiting");
+            hideElementById("id-dialog-thesaurus-error");
+            const response = await fetch(url, {
+              method: "POST",
+              body: JSON.stringify({ query })
+            });
+            if (!response.ok) {
+                throw new Error(`Response status: ${response.status}`);
+            }
+            hideElementById("id-dialog-thesaurus-waiting");
+            const jsonResponse = await response.json();
+            console.log(`getThesaurusData::json_response_keys:${Object.keys(jsonResponse)}!`);
+            const jsonData = jsonResponse.thesaurus;
+            const contentData = document.getElementById("id-dialog-thesaurus-content-data")
+            contentData.replaceChildren()
+            const parsedThesaurusData = parseThesaurusData(jsonData);
+            contentData.append(parsedThesaurusData);
+            console.error(`getThesaurusData::end!`);
+        } catch (error) {
+            console.error(error.message);
+            showElementById("id-dialog-thesaurus-error")
+        }
+    }
+
+    function insertSeparator(parentElement) {
+        const hr = document.createElement('hr')
+        hr.className = "thesaurus-separator"
+        parentElement.append(hr);
+    }
+
+    function parseThesaurusData(thesaurusJsonData) {
+        function createList(items) {
+            if (!items || !items.length) return null;
+            const ul = document.createElement('ul');
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.textContent = item;
+                ul.appendChild(li);
+            });
+            return ul;
+        }
+
+        function createParagraph(label, value) {
+            const p = document.createElement('p');
+            const strong = document.createElement('strong');
+            strong.textContent = label;
+            p.appendChild(strong);
+            p.appendChild(document.createTextNode(' '));
+            if (typeof value === 'string' || typeof value === 'number') {
+                p.appendChild(document.createTextNode(value));
+            } else if (value instanceof HTMLElement) {
+                p.appendChild(value);
+            }
+            return p;
+        }
+        const mapWordsAPIlists = {
+            "synonyms": 'Synonyms:',
+            "typeOf": 'Type Of:',
+            "hasTypes": 'Has Types:',
+            "verbGroup": 'Verb Group:',
+            "entails": 'Entails:',
+            "also": 'Also:',
+            "derivation": 'Derivation:',
+            "examples": 'Examples:'
+        }
+        const mapWordsAPIsimple = {
+            "definition": "Definition:",
+            "partOfSpeech": "Part of Speech:",
+        }
+
+
+        function renderResults(results) {
+            return results.map((res, idx) => {
+                const div = document.createElement('div');
+                div.className = 'result';
+                insertSeparator(div)
+                Object.entries(res).forEach(([key, value]) => {
+                    if(mapWordsAPIlists[key]) {
+                        div.appendChild(createParagraph(mapWordsAPIlists[key], createList(value)));
+                    } else {
+                        div.appendChild(createParagraph(mapWordsAPIsimple[key], value));
+                    }
+                })
+                return div;
+            });
+        }
+
+        const data = typeof thesaurusJsonData === 'string'
+            ? JSON.parse(thesaurusJsonData)
+            : thesaurusJsonData;
+
+        const mainDiv = document.createElement('div');
+        mainDiv.id = 'content-thesaurus-data';
+        mainDiv.className = 'thesaurus-entry';
+
+        const h1 = document.createElement('h1');
+        h1.textContent = data.word;
+        mainDiv.appendChild(h1);
+
+        renderResults(data.results).forEach(resDiv => mainDiv.appendChild(resDiv));
+
+        insertSeparator(mainDiv)
+        const h2Syllables = document.createElement('h2');
+        h2Syllables.textContent = 'Syllables';
+        mainDiv.appendChild(h2Syllables);
+
+        mainDiv.appendChild(createParagraph('Count:', data.syllables?.count ?? ''));
+        mainDiv.appendChild(createParagraph('List:', createList(data.syllables?.list)));
+
+        insertSeparator(mainDiv)
+        const h2Pron = document.createElement('h2');
+        h2Pron.textContent = 'Pronunciation';
+        mainDiv.appendChild(h2Pron);
+        mainDiv.appendChild(createParagraph('All:', data.pronunciation?.all ?? ''));
+
+        insertSeparator(mainDiv)
+        const h2Freq = document.createElement('h2');
+        h2Freq.textContent = 'Frequency';
+        mainDiv.appendChild(h2Freq);
+        mainDiv.appendChild(createParagraph('', data.frequency ?? ''));
+
+        return mainDiv;
+    }
+
+    async function openThesaurus() {
+        showElementById("id-dialog-thesaurus")
+    }
+
+    function closeThesaurus() {
+        hideElementById("id-dialog-thesaurus")
+    }
+
+    function getThesaurusDataKey(event) {
+        if (event.key === 'Enter') {
+            getThesaurusData();
+        }
+    }
+
     /** Inspired by My Ghost Writer from trincadev - https://github.com/trincadev/my_ghost_writer */
     function isES2018PlusCompatible() {
         return typeof Promise !== "undefined" && typeof Promise.prototype.finally === "function"
@@ -23333,12 +23487,79 @@ Current version indicated by LITEVER below.
             resultsContainer.appendChild(btn);
         });
     }
+
+    function showElementById(idElement) {
+        const element = document.getElementById(idElement)
+        if(element.classList.contains("hidden")) {
+            element.classList.remove("hidden");
+        }
+        return element
+    }
+    
+    function hideElementById(idElement) {
+        const element = document.getElementById(idElement)
+        if(!element.classList.contains("hidden")) {
+            element.classList.add("hidden");
+        }
+        return element
+    }
     </script>
 
     <style>
         .background-border-clicked {
             background: black;
             border: 1px solid white !important;
+        }
+        .thesaurus-separator {
+            border: 2px solid #bbb;
+            margin-bottom: 10px;
+        }
+        #id-open-dialog-thesaurus {
+            margin-bottom: 4px;
+        }
+        #id-dialog-thesaurus-error {
+            color: red;
+            font-weight: bold;
+        }
+        #id-dialog-thesaurus-close {
+            color: #fff;
+            background-color: red;
+            border-color: #2e6da4;
+        }
+        #id-dialog-thesaurus {
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+        }
+        #id-dialog-thesaurus-content-parent {
+            background: #292929;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            max-width: 600px;
+            height: 60%;
+        }
+        #id-dialog-thesaurus-content {
+            overflow: hidden;
+            max-height: 95%;
+            height: 95%;
+        }
+        #id-dialog-thesaurus-content-data {
+            overflow-y: auto;
+            max-height: 100%;
+            height: 100%;
+        }
+        #wordsearch_sort {
+            padding:0;
+            margin-right: 4px;
+            font-size:14px;
+            width: calc(100% - 60px);
+            text-overflow: ellipsis;
         }
     </style>
 </head>
@@ -23461,12 +23682,27 @@ Current version indicated by LITEVER below.
 					<button title="Perform WordSearch" type="button" class="btn btn-primary" style="width:30px;padding:4px 4px;" onclick="trigger_wordsearch_candidates();" id="id-perform-wordsearch" aria-label="id-perform-wordsearch">🔎</button>
 					</div>
 					<div style="display:flex; padding:6px">
-					<p style="margin-right:6px">Sort: </p>
-					<select title="Sort" style="padding:2px; font-size:14px; height:24px; width: calc(100% - 50px);" class="form-control" id="wordsearch_sort">
-						<option value="0">Frequency</option>
-						<option value="1">Alphabetical</option>
-					</select>
+                        <select title="Sort WordSearch" class="form-control" id="wordsearch_sort">
+                            <option value="0">Frequency sort</option>
+                            <option value="1">Alphabetic sort</option>
+                        </select>
+                        <button id="id-open-dialog-thesaurus" aria-label="id-open-dialog-thesaurus" onclick="openThesaurus()" type="button" class="btn btn-primary">Thesaurus</button>
 					</div>
+                    <div>
+                        <div id="id-dialog-thesaurus" aria-label="id-dialog-thesaurus" class="hidden">
+                            <div id="id-dialog-thesaurus-content-parent">
+                                <label for="id-dialog-thesaurus-query">Query:</label>
+                                <input type="text" id="id-dialog-thesaurus-query" placeholder="query thesaurus" style="background: black" onkeyup="getThesaurusDataKey(event)"/>
+                                <button id="id-dialog-thesaurus-submit" type="button" class="btn btn-primary" onclick="getThesaurusData()">🔎</button>
+                                <button id="id-dialog-thesaurus-close" aria-label="id-dialog-thesaurus-close" type="button" class="btn" onclick="closeThesaurus()">X</button>
+                                <span id="id-dialog-thesaurus-waiting" aria-label="d-dialog-thesaurus-waiting" class="hidden">waiting...</span>
+                                <span id="id-dialog-thesaurus-error" aria-label="d-dialog-thesaurus-error" class="hidden">Error!</span>
+                                <div id="id-dialog-thesaurus-content">
+                                    <div id="id-dialog-thesaurus-content-data"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
 					<div id="wordsearch_results" aria-label="wordsearch_results" style="height:calc(100% - 98px);overflow-y: auto;"></div>
 				</div>
 			</div>
@@ -23844,6 +24080,10 @@ Current version indicated by LITEVER below.
 								<input title="WordSearch Tool" type="checkbox" id="wordsearch_toggle" style="margin:0px 0px 0px 0px;">
 							</div>
 							<div id="guitypedesc" class="settingsdesctxt"></div>
+                            <div id="thesaurus_endpoint_container" style="margin:4px;" class="settinglabel">
+                                <div class="justifyleft settingsmall">Thesaurus endpoint</div>
+                                <input title="Thesaurus Endpoint" type="text" id="thesaurus_endpoint" aria-label="thesaurus_endpoint" class="settinglabel miniinput" placeholder="http://localhost:7860">
+                            </div>
 						</div>
 					</div>
 
