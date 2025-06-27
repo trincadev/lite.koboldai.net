@@ -23046,13 +23046,13 @@ Current version indicated by LITEVER below.
             }
             hideElementById("id-dialog-thesaurus-waiting");
             const jsonResponse = await response.json();
-            console.log(`getThesaurusData::json_response_keys:${Object.keys(jsonResponse)}!`);
             const jsonData = jsonResponse.thesaurus;
+            const duration = jsonResponse.duration;
+            const source = jsonResponse.source;
             const contentData = document.getElementById("id-dialog-thesaurus-content-data")
             contentData.replaceChildren()
-            const parsedThesaurusData = parseThesaurusData(jsonData);
+            const parsedThesaurusData = parseThesaurusData(jsonData, source);
             contentData.append(parsedThesaurusData);
-            console.error(`getThesaurusData::end!`);
         } catch (error) {
             console.error(error.message);
             showElementById("id-dialog-thesaurus-error")
@@ -23065,7 +23065,7 @@ Current version indicated by LITEVER below.
         parentElement.append(hr);
     }
 
-    function parseThesaurusData(thesaurusJsonData) {
+    function parseThesaurusData(thesaurusJsonData, source) {
         function createList(items) {
             if (!items || !items.length) return null;
             const ul = document.createElement('ul');
@@ -23156,6 +23156,10 @@ Current version indicated by LITEVER below.
         mainDiv.appendChild(h2Freq);
         mainDiv.appendChild(createParagraph('', data.frequency ?? ''));
 
+        insertSeparator(mainDiv)
+        const sourceElement = document.createElement('span');
+        sourceElement.textContent = `Source: ${source}`;
+        mainDiv.appendChild(sourceElement);
         return mainDiv;
     }
 
