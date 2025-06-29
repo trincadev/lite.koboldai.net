@@ -23020,6 +23020,21 @@ Current version indicated by LITEVER below.
 	});
 
     /* Thesaurus functionality */
+    const mapWordsAPIlists = {
+        "synonyms": 'Synonyms:',
+        "typeOf": 'Type Of:',
+        "hasTypes": 'Has Types:',
+        "verbGroup": 'Verb Group:',
+        "entails": 'Entails:',
+        "also": 'Also:',
+        "derivation": 'Derivation:',
+        "examples": 'Examples:'
+    }
+    const mapWordsAPIsimple = {
+        "definition": "Definition:",
+        "partOfSpeech": "Part of Speech:",
+    }
+
     async function getThesaurusData() {
         const queryInput = document.getElementById("id-dialog-thesaurus-query")
         const query = queryInput.value
@@ -23069,15 +23084,9 @@ Current version indicated by LITEVER below.
             const gametextSelection = window.getSelection();
             gametextSelection.removeAllRanges();
             gametextSelection.addRange(lastSelectedWord.gametextRange);
-            console.error("parseThesaurusData::updateTextWithItemFromThesaurus:onclick:", item, "=>", lastSelectedWord.gametextRange, gametextSelection, "#");
             const focusNode = gametextSelection.focusNode;
-            const sliced0 = focusNode.textContent.slice(0, gametextSelection.focusOffset);
             const sliced1 = focusNode.textContent.slice(gametextSelection.focusOffset);
-            console.error("parseThesaurusData::updateTextWithItemFromThesaurus:onclick:0=>1:", sliced0, "=>", sliced1, "#");
             focusNode.textContent = item + sliced1;
-            console.error("parseThesaurusData::updateTextWithItemFromThesaurus:CHANGED! #");
-            // TODO: add confirmation step, passing within LLM input form?
-            // the gametextSelection isn't valid anymore, best to close the form anyway
             trigger_wordsearch_candidates(false)
             closeThesaurus()
         }
@@ -23103,28 +23112,11 @@ Current version indicated by LITEVER below.
             p.appendChild(strong);
             p.appendChild(document.createTextNode(' '));
             if (typeof value === 'string' || typeof value === 'number') {
-                const a = document.createElement('a');
-                a.textContent = value;
-                a.onclick = () => updateTextWithItemFromThesaurus(value)
-                p.appendChild(a);
+                p.appendChild(document.createTextNode(value));
             } else if (value instanceof HTMLElement) {
                 p.appendChild(value);
             }
             return p;
-        }
-        const mapWordsAPIlists = {
-            "synonyms": 'Synonyms:',
-            "typeOf": 'Type Of:',
-            "hasTypes": 'Has Types:',
-            "verbGroup": 'Verb Group:',
-            "entails": 'Entails:',
-            "also": 'Also:',
-            "derivation": 'Derivation:',
-            "examples": 'Examples:'
-        }
-        const mapWordsAPIsimple = {
-            "definition": "Definition:",
-            "partOfSpeech": "Part of Speech:",
         }
 
         function renderResults(results) {
