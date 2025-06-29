@@ -23025,8 +23025,7 @@ Current version indicated by LITEVER below.
         const query = queryInput.value
         if (!query || query === "") {
             const msg = "Query cannot be empty!"
-            const error = showElementById("id-dialog-thesaurus-error")
-            error.textContent += " " + msg
+            showElementById("id-dialog-thesaurus-error", defaultErrorText, "Query cannot be empty!")
             throw new Error(msg)
         }
         console.log(`getThesaurusData::query:${query}!`);
@@ -23053,8 +23052,9 @@ Current version indicated by LITEVER below.
             const parsedThesaurusData = parseThesaurusData(jsonData, source);
             contentData.append(parsedThesaurusData);
         } catch (error) {
-            console.error(error.message);
-            showElementById("id-dialog-thesaurus-error")
+            console.error(`error.message:${error.message}.`);
+            hideElementById("id-dialog-thesaurus-waiting");
+            showElementById("id-dialog-thesaurus-error", defaultErrorText, error.message)
         }
     }
 
@@ -23065,12 +23065,31 @@ Current version indicated by LITEVER below.
     }
 
     function parseThesaurusData(thesaurusJsonData, source) {
+        function updateTextWithItemFromThesaurus(item) {
+            const gametextSelection = window.getSelection();
+            gametextSelection.removeAllRanges();
+            gametextSelection.addRange(lastSelectedWord.gametextRange);
+            console.error("parseThesaurusData::updateTextWithItemFromThesaurus:onclick:", item, "=>", lastSelectedWord.gametextRange, gametextSelection, "#");
+            const focusNode = gametextSelection.focusNode;
+            const sliced0 = focusNode.textContent.slice(0, gametextSelection.focusOffset);
+            const sliced1 = focusNode.textContent.slice(gametextSelection.focusOffset);
+            console.error("parseThesaurusData::updateTextWithItemFromThesaurus:onclick:0=>1:", sliced0, "=>", sliced1, "#");
+            focusNode.textContent = item + sliced1;
+            console.error("parseThesaurusData::updateTextWithItemFromThesaurus:CHANGED! #");
+            // TODO: add confirmation step, passing within LLM input form?
+            // the gametextSelection isn't valid anymore, best to close the form anyway
+            trigger_wordsearch_candidates(false)
+        }
+
         function createList(items) {
             if (!items || !items.length) return null;
             const ul = document.createElement('ul');
             items.forEach(item => {
                 const li = document.createElement('li');
-                li.textContent = item;
+                const a = document.createElement('a');
+                a.textContent = item;
+                a.onclick = () => updateTextWithItemFromThesaurus(item);
+                li.append(a)
                 ul.appendChild(li);
             });
             return ul;
@@ -23083,7 +23102,10 @@ Current version indicated by LITEVER below.
             p.appendChild(strong);
             p.appendChild(document.createTextNode(' '));
             if (typeof value === 'string' || typeof value === 'number') {
-                p.appendChild(document.createTextNode(value));
+                const a = document.createElement('a');
+                a.textContent = value;
+                a.onclick = () => updateTextWithItemFromThesaurus(value)
+                p.appendChild(a);
             } else if (value instanceof HTMLElement) {
                 p.appendChild(value);
             }
@@ -23176,6 +23198,11 @@ Current version indicated by LITEVER below.
     }
 
     /** Inspired by My Ghost Writer from trincadev - https://github.com/trincadev/my_ghost_writer */
+    const lastSelectedWord = {
+        gametextRange: null
+    }
+    const defaultErrorText = "Error"
+
     function isES2018PlusCompatible() {
         return typeof Promise !== "undefined" && typeof Promise.prototype.finally === "function"
     }
@@ -23462,9 +23489,11 @@ Current version indicated by LITEVER below.
                 ]
             )
             btn.onclick = () => {
+                lastSelectedWord.gametextRange = null;
                 const sel = window.getSelection();
                 sel.removeAllRanges();
                 sel.addRange(range);
+                lastSelectedWord.gametextRange = range;
                 removeClassById(underlinedClickedUrl);
                 btn.className = underlinedClickedUrl;
                 if (isSafari()) {
@@ -23495,10 +23524,18 @@ Current version indicated by LITEVER below.
         });
     }
 
-    function showElementById(idElement) {
+    function showElementById(idElement, defaultText = "", optionalText = "", elementsWithOptionalText = {
+            "id-dialog-thesaurus-error": "Error", "id-dialog-thesaurus-waiting": "Waiting..."
+        }) {
         const element = document.getElementById(idElement)
         if(element.classList.contains("hidden")) {
             element.classList.remove("hidden");
+        }
+        if (elementsWithOptionalText[idElement] !== undefined) {
+            element.textContent = defaultText
+            if (defaultText && optionalText) {
+                element.textContent = `${defaultText}, ${optionalText}`
+            }
         }
         return element
     }
