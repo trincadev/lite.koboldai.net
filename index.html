@@ -3387,6 +3387,9 @@ Current version indicated by LITEVER below.
 		websearch_retain: false,
 		websearch_template: "",
 		wordsearch_enabled: false,
+        wordsearch_use_stopwords_enabled: false, 
+        wordsearch_n_max_words_duplicated: 3,
+        wordsearch_thesaurus_endpoint: "http://localhost:7860",
 
 		max_context_length: (localflag?4096:2048),
 		max_length: (localflag?512:256),
@@ -12571,6 +12574,9 @@ Current version indicated by LITEVER below.
 		document.getElementById("auto_ctxlen").checked = localsettings.auto_ctxlen;
 		document.getElementById("auto_genamt").checked = localsettings.auto_genamt;
 		document.getElementById("wordsearch_toggle").checked = localsettings.wordsearch_enabled;
+        document.getElementById("wordsearch_use_stopwords_toggle").checked = localsettings.wordsearch_use_stopwords_enabled;
+        document.getElementById("wordsearch_n_max_words_duplicated").value = localsettings.wordsearch_n_max_words_duplicated;
+        document.getElementById("wordsearch_thesaurus_endpoint").value = localsettings.wordsearch_thesaurus_endpoint;
 		if(localflag)
 		{
 			document.getElementById("auto_ctxlen_panel").classList.add("hidden");
@@ -13162,6 +13168,9 @@ Current version indicated by LITEVER below.
 		localsettings.auto_ctxlen = (document.getElementById("auto_ctxlen").checked ? true : false);
 		localsettings.auto_genamt = (document.getElementById("auto_genamt").checked ? true : false);
 		localsettings.wordsearch_enabled = (document.getElementById("wordsearch_toggle").checked ? true : false);
+        localsettings.wordsearch_use_stopwords_enabled = document.getElementById("wordsearch_use_stopwords_toggle").checked ? true : false; 
+        localsettings.wordsearch_n_max_words_duplicated = document.getElementById("wordsearch_n_max_words_duplicated").value;
+        localsettings.wordsearch_thesaurus_endpoint = document.getElementById("wordsearch_thesaurus_endpoint").value;
 
 		localsettings.image_styles = document.getElementById("imagestyleinput").value;
 		localsettings.image_negprompt = document.getElementById("negpromptinput").value;
@@ -23044,8 +23053,8 @@ Current version indicated by LITEVER below.
             throw new Error(msg)
         }
         console.log(`getThesaurusData::query:${query}!`);
-        const thesaurusDomainElement = document.getElementById("thesaurus_endpoint")
-        const thesaurusDomain = thesaurusDomainElement.value || "http://localhost:7860"
+        const thesaurusDomainElement = document.getElementById("wordsearch_thesaurus_endpoint")
+        const thesaurusDomain = thesaurusDomainElement.value || localsettings.wordsearch_thesaurus_endpoint;
 
         const url = `${thesaurusDomain}/thesaurus-wordsapi`;
         try {
@@ -23195,6 +23204,25 @@ Current version indicated by LITEVER below.
         gametextRange: null
     }
     const defaultErrorText = "Error"
+    const wordsearch_stopwords = [
+        'about', 'above', 'after', 'again', 'all', 'also', 'am', 'an', 'and', 'another',
+        'any', 'are', 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below',
+        'between', 'both', 'but', 'by', 'came', 'can', 'cannot', 'come', 'could', 'did',
+        'do', 'does', 'doing', 'during', 'each', 'few', 'for', 'from', 'further', 'get',
+        'got', 'has', 'had', 'he', 'have', 'her', 'here', 'him', 'himself', 'his', 'how',
+        'if', 'in', 'into', 'is', 'it', 'its', 'itself', 'like', 'make', 'many', 'me',
+        'might', 'more', 'most', 'much', 'must', 'my', 'myself', 'never', 'now', 'of', 'on',
+        'only', 'or', 'other', 'our', 'ours', 'ourselves', 'out', 'over', 'own',
+        'said', 'same', 'see', 'she', 'should', 'since', 'so', 'some', 'still', 'such', 'take', 'than',
+        'that', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there', 'these', 'they',
+        'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was',
+        'way', 'we', 'well', 'were', 'what', 'where', 'when', 'which', 'while', 'who',
+        'whom', 'with', 'would', 'why', 'you', 'your', 'yours', 'yourself',
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+        'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '$', '1',
+        '2', '3', '4', '5', '6', '7', '8', '9', '0', '_',
+        'll', 're'
+    ];
 
     function isES2018PlusCompatible() {
         return typeof Promise !== "undefined" && typeof Promise.prototype.finally === "function"
@@ -23221,15 +23249,22 @@ Current version indicated by LITEVER below.
         const gametext = document.getElementById("gametext");
         const walker = document.createTreeWalker(gametext, NodeFilter.SHOW_TEXT, null, false);
         let WORD_REGEX;
+        const wordsearchUseStopwordsToggleElement = document.getElementById("wordsearch_use_stopwords_toggle")
+        const wordsearchUseStopwordsToggle = wordsearchUseStopwordsToggleElement.checked ?? localsettings.wordsearch_use_stopwords_enabled
         while (walker.nextNode()) {
             const node = walker.currentNode;
             let match;
             let nodeWords = [];
             WORD_REGEX = getBestWordRegex()
             while ((match = WORD_REGEX.exec(node.nodeValue)) !== null) {
+                const matchedWord = match[0]
+                const matchedWordInWordsearchStopwords = wordsearch_stopwords.indexOf(matchedWord.toLowerCase()) > -1
+                if (wordsearchUseStopwordsToggle && matchedWordInWordsearchStopwords) {
+                    continue
+                }
                 nodeWords.push({
-                    word: match[0],
-                    stem: normalizeAndStem(match[0]),
+                    word: matchedWord,
+                    stem: normalizeAndStem(matchedWord),
                     node: node,
                     index: match.index
                 });
@@ -23307,7 +23342,8 @@ Current version indicated by LITEVER below.
         const queryWords = (query.match(WORD_REGEX) || []).map(normalizeAndStem);
         resultsContainer.innerHTML = "";
 
-        const maxNgram = 3;
+        const nMaxNgramElement = document.getElementById("wordsearch_n_max_words_duplicated");
+        const maxNgram = nMaxNgramElement.value || localsettings.wordsearch_n_max_words_duplicated;
         const ngramCounts = getNgramCountsFromIndex(maxNgram);
         // Filter and sort candidates
         let candidateItems = filterAndSortCandidates(ngramCounts, queryWords, sortByFreq);
@@ -24134,9 +24170,17 @@ Current version indicated by LITEVER below.
 								<input title="WordSearch Tool" type="checkbox" id="wordsearch_toggle" style="margin:0px 0px 0px 0px;">
 							</div>
 							<div id="guitypedesc" class="settingsdesctxt"></div>
-                            <div id="thesaurus_endpoint_container" style="margin:4px;" class="settinglabel">
+                            <div id="use_stopwords_wordsearch_container" style="margin:4px;" class="settinglabel">
+                                <div class="justifyleft settingsmall">Use stopwords with the Word Frequency Analysis tool</div>
+                                <input title="Use wordsearch stopwrods" id="wordsearch_use_stopwords_toggle" aria-label="wordsearch_use_stopwords_toggle" type="checkbox" style="margin:0px 0px 0px 0px;">
+                            </div>
+                            <div id="n_words_duplicated_wordsearch_container" style="margin:4px;" class="settinglabel">
+                                <div class="justifyleft settingsmall" style="width: 80%;">Number of duplicated words for the Word Frequency Analysis tool</div>
+                                <input title="Number of duplicated words for the Word Frequency Analysis tool" type="number" id="wordsearch_n_max_words_duplicated" aria-label="wordsearch_n_max_words_duplicated" class="settinglabel miniinput" min="1" max="9" value="3" style="width: 30px;">
+                            </div>
+                            <div id="wordsearch_thesaurus_endpoint_container" style="margin:4px;" class="settinglabel">
                                 <div class="justifyleft settingsmall">Thesaurus endpoint</div>
-                                <input title="Thesaurus Endpoint" type="text" id="thesaurus_endpoint" aria-label="thesaurus_endpoint" class="settinglabel miniinput" placeholder="http://localhost:7860">
+                                <input title="Thesaurus Endpoint" type="text" id="wordsearch_thesaurus_endpoint" aria-label="wordsearch_thesaurus_endpoint" class="settinglabel miniinput" placeholder="http://localhost:7860">
                             </div>
 						</div>
 					</div>
