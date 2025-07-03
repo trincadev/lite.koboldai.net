@@ -23056,7 +23056,8 @@ Current version indicated by LITEVER below.
         const thesaurusDomainElement = document.getElementById("wordsearch_thesaurus_endpoint")
         const thesaurusDomain = thesaurusDomainElement.value || localsettings.wordsearch_thesaurus_endpoint;
 
-        const url = `${thesaurusDomain}/thesaurus-wordsapi`;
+        // const url = `${thesaurusDomain}/thesaurus-wordsapi`;
+        const url = `${thesaurusDomain}/thesaurus-wordnet`;
         try {
             showElementById("id-dialog-thesaurus-waiting");
             hideElementById("id-dialog-thesaurus-error");
@@ -23157,26 +23158,6 @@ Current version indicated by LITEVER below.
         mainDiv.appendChild(h1);
 
         renderResults(data.results).forEach(resDiv => mainDiv.appendChild(resDiv));
-
-        insertSeparator(mainDiv)
-        const h2Syllables = document.createElement('h2');
-        h2Syllables.textContent = 'Syllables';
-        mainDiv.appendChild(h2Syllables);
-
-        mainDiv.appendChild(createParagraph('Count:', data.syllables?.count ?? ''));
-        mainDiv.appendChild(createParagraph('List:', createList(data.syllables?.list)));
-
-        insertSeparator(mainDiv)
-        const h2Pron = document.createElement('h2');
-        h2Pron.textContent = 'Pronunciation';
-        mainDiv.appendChild(h2Pron);
-        mainDiv.appendChild(createParagraph('All:', data.pronunciation?.all ?? ''));
-
-        insertSeparator(mainDiv)
-        const h2Freq = document.createElement('h2');
-        h2Freq.textContent = 'Frequency';
-        mainDiv.appendChild(h2Freq);
-        mainDiv.appendChild(createParagraph('', data.frequency ?? ''));
 
         insertSeparator(mainDiv)
         const sourceElement = document.createElement('span');
