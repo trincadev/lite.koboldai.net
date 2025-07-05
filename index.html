@@ -23036,20 +23036,18 @@ Current version indicated by LITEVER below.
         "verbGroup": 'Verb Group:',
         "entails": 'Entails:',
         "also": 'Also:',
-        "derivation": 'Derivation:',
-        "examples": 'Examples:'
+        "derivation": 'Derivation:'
     }
     const mapWordsAPIsimple = {
-        "definition": "Definition:",
-        "partOfSpeech": "Part of Speech:",
+        "definition": "Definition:"
     }
 
     async function getThesaurusData() {
-        const queryInput = document.getElementById("id-dialog-thesaurus-query")
+        const queryInput = document.getElementById("id-rightpanel-thesaurus-query")
         const query = queryInput.value
         if (!query || query === "") {
             const msg = "Query cannot be empty!"
-            showElementById("id-dialog-thesaurus-error", defaultErrorText, "Query cannot be empty!")
+            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "Query cannot be empty!")
             throw new Error(msg)
         }
         console.log(`getThesaurusData::query:${query}!`);
@@ -23059,8 +23057,8 @@ Current version indicated by LITEVER below.
         // const url = `${thesaurusDomain}/thesaurus-wordsapi`;
         const url = `${thesaurusDomain}/thesaurus-wordnet`;
         try {
-            showElementById("id-dialog-thesaurus-waiting");
-            hideElementById("id-dialog-thesaurus-error");
+            showElementById("id-rightpanel-thesaurus-waiting");
+            hideElementById("id-rightpanel-thesaurus-error");
             const response = await fetch(url, {
               method: "POST",
               body: JSON.stringify({ query })
@@ -23068,18 +23066,18 @@ Current version indicated by LITEVER below.
             if (!response.ok) {
                 throw new Error(`Response status: ${response.status}!`);
             }
-            hideElementById("id-dialog-thesaurus-waiting");
+            hideElementById("id-rightpanel-thesaurus-waiting");
             const jsonResponse = await response.json();
             const jsonData = jsonResponse.thesaurus;
             const source = jsonResponse.source;
-            const contentData = document.getElementById("id-dialog-thesaurus-content-data")
+            const contentData = document.getElementById("id-rightpanel-thesaurus-content-data")
             contentData.replaceChildren()
             const parsedThesaurusData = parseThesaurusData(jsonData, source);
             contentData.append(parsedThesaurusData);
         } catch (error) {
             console.error(`error.message:${error.message}.`);
-            hideElementById("id-dialog-thesaurus-waiting");
-            showElementById("id-dialog-thesaurus-error", defaultErrorText, error.message)
+            hideElementById("id-rightpanel-thesaurus-waiting");
+            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, error.message)
         }
     }
 
@@ -23167,11 +23165,11 @@ Current version indicated by LITEVER below.
     }
 
     async function openThesaurus() {
-        showElementById("id-dialog-thesaurus")
+        showElementById("id-rightpanel-thesaurus")
     }
 
     function closeThesaurus() {
-        hideElementById("id-dialog-thesaurus")
+        hideElementById("id-rightpanel-thesaurus")
     }
 
     function getThesaurusDataKey(event) {
@@ -23185,7 +23183,7 @@ Current version indicated by LITEVER below.
         gametextRange: null
     }
     const defaultErrorText = "Error"
-    const wordsearch_stopwords = [
+    const wordsearch_blacklist_words = [
         'about', 'above', 'after', 'again', 'all', 'also', 'am', 'an', 'and', 'another',
         'any', 'are', 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below',
         'between', 'both', 'but', 'by', 'came', 'can', 'cannot', 'come', 'could', 'did',
@@ -23239,7 +23237,7 @@ Current version indicated by LITEVER below.
             WORD_REGEX = getBestWordRegex()
             while ((match = WORD_REGEX.exec(node.nodeValue)) !== null) {
                 const matchedWord = match[0]
-                const matchedWordInWordsearchStopwords = wordsearch_stopwords.indexOf(matchedWord.toLowerCase()) > -1
+                const matchedWordInWordsearchStopwords = wordsearch_blacklist_words.indexOf(matchedWord.toLowerCase()) > -1
                 if (wordsearchUseStopwordsToggle && matchedWordInWordsearchStopwords) {
                     continue
                 }
@@ -23490,7 +23488,6 @@ Current version indicated by LITEVER below.
         function isSafari() {
             return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         }
-
         function createResultButton(nearbytext, range, idParent, i) {
             const btn = createBtnWordsearchResults(`id-div-${idParent}-range-${i}-nth`, `id-${idParent}-range-${i}-nth`, [
                     {idContent: `id-${idParent}-wordsearch-result-before-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.before}`},
@@ -23498,22 +23495,24 @@ Current version indicated by LITEVER below.
                     {idContent: `id-${idParent}-wordsearch-result-after-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.after}`}
                 ]
             )
+            // Clone the range to preserve its state for this button
+            const clonedRange = range.cloneRange();
             btn.onclick = () => {
                 lastSelectedWord.gametextRange = null;
                 const sel = window.getSelection();
                 sel.removeAllRanges();
-                sel.addRange(range);
-                lastSelectedWord.gametextRange = range;
+                sel.addRange(clonedRange.cloneRange());
+                lastSelectedWord.gametextRange = clonedRange.cloneRange();
                 removeClassById(underlinedClickedUrl);
                 btn.className = underlinedClickedUrl;
                 if (isSafari()) {
-                    scrollToCaret(range, "gametext");
+                    scrollToCaret(clonedRange, "gametext");
                 } else {
-                    handleDefaultScroll(range);
+                    handleDefaultScroll(clonedRange);
                 }
                 // populate thesaurus modal
                 openThesaurus()
-                const thesaurusQueryElement = document.getElementById("id-dialog-thesaurus-query")
+                const thesaurusQueryElement = document.getElementById("id-rightpanel-thesaurus-query")
                 thesaurusQueryElement.value = query
                 getThesaurusData()
             };
@@ -23535,7 +23534,7 @@ Current version indicated by LITEVER below.
     }
 
     function showElementById(idElement, defaultText = "", optionalText = "", elementsWithOptionalText = {
-            "id-dialog-thesaurus-error": "Error", "id-dialog-thesaurus-waiting": "Waiting..."
+            "id-rightpanel-thesaurus-error": "Error", "id-rightpanel-thesaurus-waiting": "Waiting..."
         }) {
         const element = document.getElementById(idElement)
         if(element.classList.contains("hidden")) {
@@ -23571,16 +23570,16 @@ Current version indicated by LITEVER below.
         #id-open-dialog-thesaurus {
             margin-bottom: 4px;
         }
-        #id-dialog-thesaurus-error {
+        #id-rightpanel-thesaurus-error {
             color: red;
             font-weight: bold;
         }
-        #id-dialog-thesaurus-close {
+        #id-rightpanel-thesaurus-close {
             color: #fff;
             background-color: red;
             border-color: #2e6da4;
         }
-        #id-dialog-thesaurus {
+        #id-rightpanel-thesaurus {
             position: fixed;
             z-index: 1;
             right: 0;
@@ -23591,7 +23590,7 @@ Current version indicated by LITEVER below.
             background-color: rgba(0,0,0,0.4);
         }
 
-        #id-dialog-thesaurus-content-parent {
+        #id-rightpanel-thesaurus-content-parent {
             background: #292929;
             margin: auto 0 auto auto;
             padding: 20px;
@@ -23615,12 +23614,12 @@ Current version indicated by LITEVER below.
             */
             height: 100vh;
         }
-        #id-dialog-thesaurus-content {
+        #id-rightpanel-thesaurus-content {
             overflow: hidden;
             max-height: 95%;
             height: 95%;
         }
-        #id-dialog-thesaurus-content-data {
+        #id-rightpanel-thesaurus-content-data {
             overflow-y: auto;
             max-height: 100%;
             height: 100%;
@@ -23631,6 +23630,12 @@ Current version indicated by LITEVER below.
             font-size:14px;
             width: calc(100% - 60px);
             text-overflow: ellipsis;
+        }
+        .id-rightpanel-thesaurus-input {
+            background: black;
+            width: calc(100% - 150px);
+            margin-bottom: 4px;
+            margin-top: 4px;
         }
     </style>
 </head>
@@ -23760,16 +23765,16 @@ Current version indicated by LITEVER below.
                         <button id="id-open-dialog-thesaurus" aria-label="id-open-dialog-thesaurus" onclick="openThesaurus()" type="button" class="btn btn-primary">Thesaurus</button>
 					</div>
                     <div>
-                        <div id="id-dialog-thesaurus" aria-label="id-dialog-thesaurus" class="hidden">
-                            <div id="id-dialog-thesaurus-content-parent">
-                                <label for="id-dialog-thesaurus-query">Query:</label>
-                                <input type="text" id="id-dialog-thesaurus-query" placeholder="query thesaurus" style="background: black" onkeyup="getThesaurusDataKey(event)"/>
-                                <button id="id-dialog-thesaurus-submit" type="button" class="btn btn-primary" onclick="getThesaurusData()">🔎</button>
-                                <button id="id-dialog-thesaurus-close" aria-label="id-dialog-thesaurus-close" type="button" class="btn" onclick="closeThesaurus()">X</button>
-                                <span id="id-dialog-thesaurus-waiting" aria-label="d-dialog-thesaurus-waiting" class="hidden">waiting...</span>
-                                <span id="id-dialog-thesaurus-error" aria-label="d-dialog-thesaurus-error" class="hidden">Error!</span>
-                                <div id="id-dialog-thesaurus-content">
-                                    <div id="id-dialog-thesaurus-content-data"></div>
+                        <div id="id-rightpanel-thesaurus" aria-label="id-rightpanel-thesaurus" class="hidden">
+                            <div id="id-rightpanel-thesaurus-content-parent">
+                                <label for="id-rightpanel-thesaurus-query">Query:</label>
+                                <input type="text" id="id-rightpanel-thesaurus-query" placeholder="query thesaurus" class="id-rightpanel-thesaurus-input" onkeyup="getThesaurusDataKey(event)"/>
+                                <button id="id-rightpanel-thesaurus-submit" type="button" class="btn btn-primary" onclick="getThesaurusData()">🔎</button>
+                                <button id="id-rightpanel-thesaurus-close" aria-label="id-rightpanel-thesaurus-close" type="button" class="btn" onclick="closeThesaurus()">X</button>
+                                <span id="id-rightpanel-thesaurus-waiting" aria-label="d-dialog-thesaurus-waiting" class="hidden">waiting...</span>
+                                <span id="id-rightpanel-thesaurus-error" aria-label="d-dialog-thesaurus-error" class="hidden">Error!</span>
+                                <div id="id-rightpanel-thesaurus-content">
+                                    <div id="id-rightpanel-thesaurus-content-data"></div>
                                 </div>
                             </div>
                         </div>
