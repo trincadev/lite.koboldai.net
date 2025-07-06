@@ -14171,7 +14171,7 @@ Current version indicated by LITEVER below.
 				gametext_arr.pop();
 			}
 		}
-		render_gametext(false);
+		render_gametext(false, false);
         /* My Ghost Writer: this will parse again the text because of edit mode toggle */
         if (localsettings.wordsearch_enabled) {
             trigger_wordsearch_candidates(false)
@@ -23050,7 +23050,7 @@ Current version indicated by LITEVER below.
             showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "Query cannot be empty!")
             throw new Error(msg)
         }
-        console.log(`getThesaurusData::query:${query}!`);
+        console.error(`getThesaurusData::query:${query}!`);
         const thesaurusDomainElement = document.getElementById("wordsearch_thesaurus_endpoint")
         const thesaurusDomain = thesaurusDomainElement.value || localsettings.wordsearch_thesaurus_endpoint;
 
@@ -23095,18 +23095,29 @@ Current version indicated by LITEVER below.
             const focusNode = gametextSelection.focusNode;
             const sliced1 = focusNode.textContent.slice(gametextSelection.focusOffset);
             focusNode.textContent = item + sliced1;
+
+            // Restore selection
+            const range = document.createRange();
+            range.setStart(focusNode, 0);
+            range.setEnd(focusNode, item.length);
+
+            gametextSelection.removeAllRanges();
+            gametextSelection.addRange(range);
+
             trigger_wordsearch_candidates(false)
             closeThesaurus()
         }
 
-        function createList(items) {
+        function createList(items, isEditable) {
             if (!items || !items.length) return null;
             const ul = document.createElement('ul');
             items.forEach(item => {
                 const li = document.createElement('li');
-                const a = document.createElement('a');
+                const a = document.createElement(isEditable ? 'a' : "span");
                 a.textContent = item;
-                a.onclick = () => updateTextWithItemFromThesaurus(item);
+                if (isEditable) {
+                    a.onclick = () => updateTextWithItemFromThesaurus(item);
+                }
                 li.append(a)
                 ul.appendChild(li);
             });
@@ -23127,14 +23138,14 @@ Current version indicated by LITEVER below.
             return p;
         }
 
-        function renderResults(results) {
+        function renderResults(results, isEditable) {
             return results.map((res, idx) => {
                 const div = document.createElement('div');
                 div.className = 'result';
                 insertSeparator(div)
                 Object.entries(res).forEach(([key, value]) => {
                     if(mapWordsAPIlists[key]) {
-                        div.appendChild(createParagraph(mapWordsAPIlists[key], createList(value)));
+                        div.appendChild(createParagraph(mapWordsAPIlists[key], createList(value, isEditable)));
                     } else {
                         div.appendChild(createParagraph(mapWordsAPIsimple[key], value));
                     }
@@ -23142,7 +23153,6 @@ Current version indicated by LITEVER below.
                 return div;
             });
         }
-
         const data = typeof thesaurusJsonData === 'string'
             ? JSON.parse(thesaurusJsonData)
             : thesaurusJsonData;
@@ -23155,7 +23165,8 @@ Current version indicated by LITEVER below.
         h1.textContent = data.word;
         mainDiv.appendChild(h1);
 
-        renderResults(data.results).forEach(resDiv => mainDiv.appendChild(resDiv));
+        const gametextElement = document.getElementById("allowediting")
+        renderResults(data.results, gametextElement.checked).forEach(resDiv => mainDiv.appendChild(resDiv));
 
         insertSeparator(mainDiv)
         const sourceElement = document.createElement('span');
@@ -23310,7 +23321,7 @@ Current version indicated by LITEVER below.
         if (renderGametext) {
             // workaround to avoid disappearing results after click on urls/divs returned by trigger_wordsearch_results()
             // but only if not changing the editable mode
-            render_gametext(false);
+            render_gametext(false, false);
         }
         const searchBox = document.getElementById("wordsearch_input");
         const resultsContainer = document.getElementById("wordsearch_results");
