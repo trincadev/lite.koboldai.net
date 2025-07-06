@@ -14171,7 +14171,7 @@ Current version indicated by LITEVER below.
 				gametext_arr.pop();
 			}
 		}
-		render_gametext(false);
+		render_gametext(false, false);
         /* My Ghost Writer: this will parse again the text because of edit mode toggle */
         if (localsettings.wordsearch_enabled) {
             trigger_wordsearch_candidates(false)
@@ -23087,26 +23087,35 @@ Current version indicated by LITEVER below.
         parentElement.append(hr);
     }
 
-    function updateTextWithItemFromThesaurus(item) {
-        const gametextSelection = window.getSelection();
-        gametextSelection.removeAllRanges();
-        gametextSelection.addRange(lastSelectedWord.gametextRange);
-        const focusNode = gametextSelection.focusNode;
-        const sliced1 = focusNode.textContent.slice(gametextSelection.focusOffset);
-        focusNode.textContent = item + sliced1;
-        trigger_wordsearch_candidates(false)
-        closeThesaurus()
-    }
+        function updateTextWithItemFromThesaurus(item) {
+            const gametextSelection = window.getSelection();
+            gametextSelection.removeAllRanges();
+            gametextSelection.addRange(lastSelectedWord.gametextRange);
+            const focusNode = gametextSelection.focusNode;
+            const sliced1 = focusNode.textContent.slice(gametextSelection.focusOffset);
+            focusNode.textContent = item + sliced1;
+
+            // Restore selection
+            const range = document.createRange();
+            range.setStart(focusNode, 0);
+            range.setEnd(focusNode, item.length);
+            gametextSelection.removeAllRanges();
+            gametextSelection.addRange(range);
+
+            closeThesaurus(true, false)
+        }
 
     function parseThesaurusData(thesaurusJsonData, source) {
-        function createList(items) {
+        function createList(items, isEditable) {
             if (!items || !items.length) return null;
             const ul = document.createElement('ul');
             items.forEach(item => {
                 const li = document.createElement('li');
-                const a = document.createElement('a');
+                const a = document.createElement(isEditable ? 'a' : "span");
                 a.textContent = item;
-                a.onclick = () => updateTextWithItemFromThesaurus(item);
+                if (isEditable) {
+                    a.onclick = () => updateTextWithItemFromThesaurus(item);
+                }
                 li.append(a)
                 ul.appendChild(li);
             });
@@ -23127,14 +23136,14 @@ Current version indicated by LITEVER below.
             return p;
         }
 
-        function renderResults(results) {
+        function renderResults(results, isEditable) {
             return results.map((res, idx) => {
                 const div = document.createElement('div');
                 div.className = 'result';
                 insertSeparator(div)
                 Object.entries(res).forEach(([key, value]) => {
                     if(mapWordsAPIlists[key]) {
-                        div.appendChild(createParagraph(mapWordsAPIlists[key], createList(value)));
+                        div.appendChild(createParagraph(mapWordsAPIlists[key], createList(value, isEditable)));
                     } else {
                         div.appendChild(createParagraph(mapWordsAPIsimple[key], value));
                     }
@@ -23155,7 +23164,8 @@ Current version indicated by LITEVER below.
         h1.textContent = data.word;
         mainDiv.appendChild(h1);
 
-        renderResults(data.results).forEach(resDiv => mainDiv.appendChild(resDiv));
+        const gametextElement = document.getElementById("allowediting")
+        renderResults(data.results, gametextElement.checked).forEach(resDiv => mainDiv.appendChild(resDiv));
 
         insertSeparator(mainDiv)
         const sourceElement = document.createElement('span');
@@ -23168,8 +23178,11 @@ Current version indicated by LITEVER below.
         showElementById("id-rightpanel-thesaurus")
     }
 
-    function closeThesaurus() {
+    function closeThesaurus(fireNewSearch=true, renderGametext=true) {
         hideElementById("id-rightpanel-thesaurus")
+        if (fireNewSearch) {
+            trigger_wordsearch_candidates(renderGametext)
+        }
     }
 
     function getThesaurusDataKey(event) {
@@ -23328,7 +23341,11 @@ Current version indicated by LITEVER below.
                     synonymButton.appendChild(inflectedSpan);
                 }
 
-                // Apply synonym when clicked
+                // Apply synonym when clicked, but only if #allowediting checked
+                const iseditable = document.getElementById("allowediting")
+                if (!iseditable.checked) {
+                    synonymButton.disabled = true
+                }
                 synonymButton.addEventListener('click', () => {
                     applyInflatedSynonym(synonym.inflected_form, synonymData.originalWord);
                 });
@@ -23400,10 +23417,6 @@ Current version indicated by LITEVER below.
             if (synonymContainer) {
                 synonymContainer.remove();
             }
-
-            // Also close the main thesaurus if it's open
-            closeThesaurus();
-
         } catch (error) {
             console.error('Error applying synonym:', error, "#");
             console.error('Tried to apply inflated synonym:', selectedSynonym, 'replacing:', originalWord, "#");
@@ -23543,7 +23556,7 @@ Current version indicated by LITEVER below.
         if (renderGametext) {
             // workaround to avoid disappearing results after click on urls/divs returned by trigger_wordsearch_results()
             // but only if not changing the editable mode
-            render_gametext(false);
+            render_gametext(false, false);
         }
         const searchBox = document.getElementById("wordsearch_input");
         const resultsContainer = document.getElementById("wordsearch_results");
@@ -23774,67 +23787,66 @@ Current version indicated by LITEVER below.
         function isSafari() {
             return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
         }
-    function createResultButton(nearbytext, range, idParent, i) {
-        const btn = createBtnWordsearchResults(`id-div-${idParent}-range-${i}-nth`, `id-${idParent}-range-${i}-nth`, [
-                {idContent: `id-${idParent}-wordsearch-result-before-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.before}`},
-                {idContent: `id-${idParent}-wordsearch-result-target-${i}-nth`, cssClass: "color_wordsearch_target", textContent: `${nearbytext.middle}`},
-                {idContent: `id-${idParent}-wordsearch-result-after-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.after}`}
-            ]
-        )
+        function createResultButton(nearbytext, range, idParent, i) {
+            const btn = createBtnWordsearchResults(`id-div-${idParent}-range-${i}-nth`, `id-${idParent}-range-${i}-nth`, [
+                    {idContent: `id-${idParent}-wordsearch-result-before-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.before}`},
+                    {idContent: `id-${idParent}-wordsearch-result-target-${i}-nth`, cssClass: "color_wordsearch_target", textContent: `${nearbytext.middle}`},
+                    {idContent: `id-${idParent}-wordsearch-result-after-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.after}`}
+                ]
+            )
 
-        const clonedRange = range.cloneRange();
-        btn.onclick = async () => {
-            try {
-                lastSelectedWord.gametextRange = null;
-                const sel = window.getSelection();
-                sel.removeAllRanges();
-                sel.addRange(clonedRange.cloneRange());
+            const clonedRange = range.cloneRange();
+            btn.onclick = async () => {
+                try {
+                    lastSelectedWord.gametextRange = null;
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(clonedRange.cloneRange());
 
-                const {end, start, len, wholeText, word} = getSelectionTextNodeOffsets(clonedRange.cloneRange())
-                const {sentence, start_in_sentence, end_in_sentence} = await getSingleSentence(wholeText, start, end, word)
-                // Fetch inflated synonyms
-                const synonymsResponse = await fetchSynonymsWithContext(sentence, start_in_sentence, end_in_sentence, word)
-                // Parse the response
-                const synonymData = parseInflatedSynonymResponse(synonymsResponse);
+                    const {end, start, len, wholeText, word} = getSelectionTextNodeOffsets(clonedRange.cloneRange())
+                    const {sentence, start_in_sentence, end_in_sentence} = await getSingleSentence(wholeText, start, end, word)
+                    // Fetch inflated synonyms
+                    const synonymsResponse = await fetchSynonymsWithContext(sentence, start_in_sentence, end_in_sentence, word)
+                    // Parse the response
+                    const synonymData = parseInflatedSynonymResponse(synonymsResponse);
 
-                lastSelectedWord.gametextRange = clonedRange.cloneRange();
-                removeClassById(underlinedClickedUrl);
-                btn.className = underlinedClickedUrl;
+                    lastSelectedWord.gametextRange = clonedRange.cloneRange();
+                    removeClassById(underlinedClickedUrl);
+                    btn.className = underlinedClickedUrl;
 
-                if (isSafari()) {
-                    scrollToCaret(clonedRange, "gametext");
-                } else {
-                    handleDefaultScroll(clonedRange);
+                    if (isSafari()) {
+                        scrollToCaret(clonedRange, "gametext");
+                    } else {
+                        handleDefaultScroll(clonedRange);
+                    }
+
+                    // Create and display the inflated synonym UI
+                    const existingSynonymUI = document.querySelector('.inflated-synonym-container');
+                    if (existingSynonymUI) {
+                        existingSynonymUI.remove();
+                    }
+
+                    const synonymUI = createInflatedSynonymUI(synonymData);
+
+                    // Add the UI to the thesaurus content area or create a modal
+                    await openThesaurus();
+                    const contentData = document.getElementById("id-rightpanel-thesaurus-content-data");
+                    contentData.replaceChildren();
+                    contentData.appendChild(synonymUI);
+
+                    // Update the query field for consistency
+                    const thesaurusQueryElement = document.getElementById("id-rightpanel-thesaurus-query");
+                    if (thesaurusQueryElement) {
+                        thesaurusQueryElement.value = `${word}`; // sanitize
+                    }
+                } catch (error) {
+                    console.error('createResultButton::Error in result button click handler:', error, "#");
+                    alert('Failed to fetch smart synonyms. Please try again.');
                 }
+            };
 
-                // Create and display the inflated synonym UI
-                const existingSynonymUI = document.querySelector('.inflated-synonym-container');
-                if (existingSynonymUI) {
-                    existingSynonymUI.remove();
-                }
-
-                const synonymUI = createInflatedSynonymUI(synonymData);
-
-                // Add the UI to the thesaurus content area or create a modal
-                await openThesaurus();
-                const contentData = document.getElementById("id-rightpanel-thesaurus-content-data");
-                contentData.replaceChildren();
-                contentData.appendChild(synonymUI);
-
-                // Update the query field for consistency
-                const thesaurusQueryElement = document.getElementById("id-rightpanel-thesaurus-query");
-                if (thesaurusQueryElement) {
-                    thesaurusQueryElement.value = `${word}`; // sanitize
-                }
-
-            } catch (error) {
-                console.error('createResultButton::Error in result button click handler:', error, "#");
-                alert('Failed to fetch smart synonyms. Please try again.');
-            }
-        };
-
-        return btn;
-    }
+            return btn;
+        }
 
         // Main logic
         let matchRanges = search_text_for_strings(queryWords);
@@ -23866,7 +23878,6 @@ Current version indicated by LITEVER below.
         }
         const sentenceJson = await targetSentenceResponse.json()
         const {sentence, start_in_sentence, end_in_sentence} = sentenceJson
-        const word_in_sentence = sentence.slice(start_in_sentence, end_in_sentence)
         return {sentence, start_in_sentence, end_in_sentence}
     }
 
@@ -23938,8 +23949,8 @@ Current version indicated by LITEVER below.
         }
         #id-rightpanel-thesaurus-content {
             overflow: hidden;
-            max-height: 75%;
-            height: 75%;
+            max-height: 95%;
+            height: 95%;
         }
         #id-rightpanel-thesaurus-content-data {
             overflow-y: auto;
@@ -23966,12 +23977,11 @@ Current version indicated by LITEVER below.
             border: 1px solid #ccc;
             border-radius: 8px;
             padding: 20px;
-            max-height: 80vh;
+            margin: 4px;
             overflow-y: auto;
         }
 
         .inflated-synonym-header h2 {
-            color: #333;
             margin-bottom: 15px;
         }
 
@@ -24000,7 +24010,6 @@ Current version indicated by LITEVER below.
         }
 
         .inflated-synonyms-list h4 {
-            color: #555;
             margin-bottom: 10px;
         }
 
@@ -24024,6 +24033,12 @@ Current version indicated by LITEVER below.
 
         .inflated-synonym-option:hover {
             background: #0056b3;
+        }
+        .inflated-synonym-option:disabled,
+        .inflated-synonym-option[disabled]{
+            border: 1px solid #999999;
+            background-color: #cccccc;
+            color: #666666;
         }
 
         .inflected-form {
@@ -24186,7 +24201,6 @@ Current version indicated by LITEVER below.
                             <option value="0">Frequency sort</option>
                             <option value="1">Alphabetic sort</option>
                         </select>
-                        <button id="id-open-dialog-thesaurus" aria-label="id-open-dialog-thesaurus" onclick="openThesaurus()" type="button" class="btn btn-primary">Thesaurus</button>
 					</div>
                     <div>
                         <div id="id-rightpanel-thesaurus" aria-label="id-rightpanel-thesaurus" class="hidden">
@@ -24199,12 +24213,6 @@ Current version indicated by LITEVER below.
                                 <span id="id-rightpanel-thesaurus-error" aria-label="d-dialog-thesaurus-error" class="hidden">Error!</span>
                                 <div id="id-rightpanel-thesaurus-content">
                                     <div id="id-rightpanel-thesaurus-content-data"></div>
-                                </div>
-                                <div id="id-rightpanel-thesaurus-input-parent">
-                                    <textarea id="id-rightpanel-thesaurus-input-field" title="thesaurus input field" type="text" placeholder="..." class="id-rightpanel-thesaurus-input form-control menuinput_multiline" style="height: 80px;"></textarea>
-                                </div>
-                                <div id="id-rightpanel-thesaurus-preview-substition-parent">
-                                    <span id="id-rightpanel-thesaurus-preview-substition"></span>
                                 </div>
                             </div>
                         </div>
