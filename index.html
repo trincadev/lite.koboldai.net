@@ -23050,45 +23050,6 @@ Current version indicated by LITEVER below.
         isCustomEdit: false
     }
 
-    async function getThesaurusData() {
-        const queryInput = document.getElementById("id-rightpanel-thesaurus-query")
-        const query = queryInput.value
-        if (!query || query === "") {
-            const msg = "Query cannot be empty!"
-            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "Query cannot be empty!")
-            throw new Error(msg)
-        }
-        console.error(`getThesaurusData::query:${query}!`);
-        const thesaurusDomainElement = document.getElementById("wordsearch_thesaurus_endpoint")
-        const thesaurusDomain = thesaurusDomainElement.value || localsettings.wordsearch_thesaurus_endpoint;
-
-        // const url = `${thesaurusDomain}/thesaurus-wordsapi`;
-        const url = `${thesaurusDomain}/thesaurus-wordnet`;
-        try {
-            showElementById("id-rightpanel-thesaurus-waiting");
-            hideElementById("id-rightpanel-thesaurus-error");
-            const response = await fetch(url, {
-                method: "POST",
-                body: JSON.stringify({ query })
-            });
-            if (!response.ok) {
-                throw new Error(`Response status: ${response.status}!`);
-            }
-            hideElementById("id-rightpanel-thesaurus-waiting");
-            const jsonResponse = await response.json();
-            const jsonData = jsonResponse.thesaurus;
-            const source = jsonResponse.source;
-            const contentData = document.getElementById("id-rightpanel-thesaurus-content-data")
-            contentData.replaceChildren()
-            const parsedThesaurusData = parseThesaurusData(jsonData, source);
-            contentData.append(parsedThesaurusData);
-        } catch (error) {
-            console.error(`error.message:${error.message}.`);
-            hideElementById("id-rightpanel-thesaurus-waiting");
-            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, error.message)
-        }
-    }
-
     function insertSeparator(parentElement) {
         const hr = document.createElement('hr')
         hr.className = "thesaurus-separator"
@@ -23122,75 +23083,6 @@ Current version indicated by LITEVER below.
         closeThesaurus(true, false)
     }
 
-    function parseThesaurusData(thesaurusJsonData, source) {
-        function createList(items, isEditable) {
-            if (!items || !items.length) return null;
-            const ul = document.createElement('ul');
-            items.forEach(item => {
-                const li = document.createElement('li');
-                const a = document.createElement(isEditable ? 'a' : "span");
-                a.textContent = item;
-                if (isEditable) {
-                    a.onclick = () => updateTextWithItemFromThesaurus(item);
-                }
-                li.append(a)
-                ul.appendChild(li);
-            });
-            return ul;
-        }
-
-        function createParagraph(label, value) {
-            const p = document.createElement('p');
-            const strong = document.createElement('strong');
-            strong.textContent = label;
-            p.appendChild(strong);
-            p.appendChild(document.createTextNode(' '));
-            if (typeof value === 'string' || typeof value === 'number') {
-                p.appendChild(document.createTextNode(value));
-            } else if (value instanceof HTMLElement) {
-                p.appendChild(value);
-            }
-            return p;
-        }
-
-        function renderResults(results, isEditable) {
-            return results.map((res, idx) => {
-                const div = document.createElement('div');
-                div.className = 'result';
-                insertSeparator(div)
-                Object.entries(res).forEach(([key, value]) => {
-                    if(mapWordsAPIlists[key]) {
-                        div.appendChild(createParagraph(mapWordsAPIlists[key], createList(value, isEditable)));
-                    } else {
-                        div.appendChild(createParagraph(mapWordsAPIsimple[key], value));
-                    }
-                })
-                return div;
-            });
-        }
-
-        const data = typeof thesaurusJsonData === 'string'
-            ? JSON.parse(thesaurusJsonData)
-            : thesaurusJsonData;
-
-        const mainDiv = document.createElement('div');
-        mainDiv.id = 'content-thesaurus-data';
-        mainDiv.className = 'thesaurus-entry';
-
-        const h1 = document.createElement('h1');
-        h1.textContent = data.word;
-        mainDiv.appendChild(h1);
-
-        const gametextElement = document.getElementById("allowediting")
-        renderResults(data.results, gametextElement.checked).forEach(resDiv => mainDiv.appendChild(resDiv));
-
-        insertSeparator(mainDiv)
-        const sourceElement = document.createElement('span');
-        sourceElement.textContent = `Source: ${source}`;
-        mainDiv.appendChild(sourceElement);
-        return mainDiv;
-    }
-
     async function openThesaurus() {
         showElementById("id-rightpanel-thesaurus")
 
@@ -23209,13 +23101,15 @@ Current version indicated by LITEVER below.
         };
 
         // Initialize the input with the current phrase from the global state. Correct????
-        updateSynonymModInput("openThesaurus");
+        updateSynonymInput("openThesaurus");
 
         if (!iseditable.checked) {
             buttonConfirmation.disabled = true
+            synonymModInput.disabled = true
         } else {
             try {
                 buttonConfirmation.removeAttribute("disabled")
+                synonymModInput.removeAttribute("disabled")
             } catch {/* skip actions if no disabled attribute */}
         }
     }
@@ -23225,30 +23119,6 @@ Current version indicated by LITEVER below.
         if (fireNewSearch) {
             trigger_wordsearch_candidates(renderGametext)
         }
-    }
-
-    function getThesaurusDataKey(event) {
-        if (event.key === 'Enter') {
-            getThesaurusData();
-        }
-    }
-
-    function parseInflatedSynonymResponse(response) {
-        if (!response || !response.success) {
-            console.error(`parseInflatedSynonymResponse::error on parsing response.`);
-            hideElementById("id-rightpanel-thesaurus-waiting");
-            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "error on parsing response.")
-            throw new Error(response?.error || 'Invalid response format');
-        }
-
-        return {
-            originalWord: response.original_word,
-            contextInfo: response.context_info,
-            synonymGroups: response.synonym_groups,
-            originalIndices: response.original_indices,
-            debugInfo: response.debug_info,
-            message: response.message
-        };
     }
 
     function parseInflatedSynonymPhraseResponse(response) {
@@ -23428,7 +23298,7 @@ Current version indicated by LITEVER below.
                     synonymButton.addEventListener('click', () => {
                         const {start, end} = result.originalIndices
                         // Pass the button element itself for styling
-                        populateSynonymInputMod(synonym.inflected_form, result.originalWord, start, end, synonymButton)
+                        populateSynonymInput(synonym.inflected_form, result.originalWord, start, end, synonymButton)
                     });
 
                 synonymContainer.appendChild(synonymButton);
@@ -23500,7 +23370,7 @@ Current version indicated by LITEVER below.
         return container
     }
 
-    function populateSynonymInputMod(synonymChosen, originalWord, startIdx, endIdx, clickedButton) {
+    function populateSynonymInput(synonymChosen, originalWord, startIdx, endIdx, clickedButton) {
         // 1. Deselect any other button for the same original word
         const buttonsForSameWord = document.querySelectorAll(`.inflated-synonym-option[data-original-word="${originalWord}"]`);
         buttonsForSameWord.forEach(btn => btn.classList.remove('synonym-selected'));
@@ -23524,10 +23394,10 @@ Current version indicated by LITEVER below.
             console.error("Could not find the target item to update in globalSelection.");
         }
         // Now, call the function to rebuild the preview string.
-        updateSynonymModInput("populateSynonymInputMod")
+        updateSynonymInput("populateSynonymInputMod")
     }
 
-    function updateSynonymModInput(origin) {
+    function updateSynonymInput(origin) {
         const originalPhrase = globalSelection.originalPhrase;
         let updatedPhrase = "";
         let lastIndex = 0;
@@ -23556,7 +23426,7 @@ Current version indicated by LITEVER below.
         console.log(`updateSynonymModInput (from ${origin}): Updated phrase is now "${updatedPhrase}"`);
     }
 
-    function confirmSynonymMod() {
+    function confirmSynonymButton() {
         const iseditable = document.getElementById("allowediting")
         if (iseditable.checked) {
             // Check which workflow is active
@@ -24030,12 +23900,6 @@ Current version indicated by LITEVER below.
                     const contentData = document.getElementById("id-rightpanel-thesaurus-content-data");
                     contentData.replaceChildren();
                     contentData.appendChild(synonymUI);
-
-                    // Update the query field for consistency
-                    const thesaurusQueryElement = document.getElementById("id-rightpanel-thesaurus-query");
-                    if (thesaurusQueryElement) {
-                        thesaurusQueryElement.value = `${word}`; // sanitize
-                    }
                 } catch (error) {
                     console.error('createResultButton::Error in result button click handler:', error, "#");
                     alert('Failed to fetch smart synonyms. Please try again.');
@@ -24119,10 +23983,14 @@ Current version indicated by LITEVER below.
             color: red;
             font-weight: bold;
         }
+        #id-rightpanel-thesaurus-close-parent {
+            display: flex;
+        }
         #id-rightpanel-thesaurus-close {
             color: #fff;
             background-color: red;
             border-color: #2e6da4;
+            /*margin-left: auto;*/
         }
         #id-rightpanel-thesaurus {
             position: fixed;
@@ -24151,8 +24019,8 @@ Current version indicated by LITEVER below.
         }
         #id-rightpanel-thesaurus-content-data {
             overflow-y: auto;
-            max-height: 90%;
-            height: 90%;
+            max-height: 100%;
+            height: 100%;
         }
         #wordsearch_sort {
             padding:0;
@@ -24167,8 +24035,6 @@ Current version indicated by LITEVER below.
             margin-bottom: 4px;
             margin-top: 4px;
         }
-
-        /*new */
 
         .inflated-synonym-container {
             border: 1px solid #ccc;
@@ -24412,18 +24278,12 @@ Current version indicated by LITEVER below.
                     <div>
                         <div id="id-rightpanel-thesaurus" aria-label="id-rightpanel-thesaurus" class="hidden">
                             <div id="id-rightpanel-thesaurus-content-parent">
-                                <label for="id-rightpanel-thesaurus-query">Query:</label>
-                                <input type="text" id="id-rightpanel-thesaurus-query" placeholder="query thesaurus" class="id-rightpanel-thesaurus-input" onkeyup="getThesaurusDataKey(event)"/>
-                                <button id="id-rightpanel-thesaurus-submit" type="button" class="btn btn-primary" onclick="getThesaurusData()">🔎</button>
-                                <button id="id-rightpanel-thesaurus-close" aria-label="id-rightpanel-thesaurus-close" type="button" class="btn" onclick="closeThesaurus()">X</button>
-                                <span id="id-rightpanel-thesaurus-waiting" aria-label="d-dialog-thesaurus-waiting" class="hidden">waiting...</span>
-                                <span id="id-rightpanel-thesaurus-error" aria-label="d-dialog-thesaurus-error" class="hidden">Error!</span>
-                                <div id="id-rightpanel-thesaurus-content">
-                                    <div id="id-rightpanel-thesaurus-content-data"></div>
+                                <div id="id-rightpanel-thesaurus-close-parent">
+                                    <button id="id-rightpanel-thesaurus-close" aria-label="id-rightpanel-thesaurus-close" type="button" class="btn" onclick="closeThesaurus()">X</button>
                                     <input
                                             title="synonym mod Input"
                                             class="form-control menuinput_inline"
-                                            style="width: calc(100% - 34px); margin-right:2px;"
+                                            style="width: calc(100% - 100px); margin-right:2px;"
                                             type="search"
                                             placeholder="synonym(s) substitution"
                                             value=""
@@ -24433,10 +24293,15 @@ Current version indicated by LITEVER below.
                                             title="confirm synonym mod"
                                             type="button"
                                             class="btn btn-primary"
-                                            onclick="confirmSynonymMod()"
+                                            onclick="confirmSynonymButton()"
                                             id="thesaurus-synonym-mod-confirm-button"
                                             aria-label="thesaurus-synonym-mod-confirm-button"
                                     >confirm</button>
+                                </div>
+                                <span id="id-rightpanel-thesaurus-waiting" aria-label="d-dialog-thesaurus-waiting" class="hidden">waiting...</span>
+                                <span id="id-rightpanel-thesaurus-error" aria-label="d-dialog-thesaurus-error" class="hidden">Error!</span>
+                                <div id="id-rightpanel-thesaurus-content">
+                                    <div id="id-rightpanel-thesaurus-content-data" aria-label="id-rightpanel-thesaurus-content-data"></div>
                                 </div>
                             </div>
                         </div>
