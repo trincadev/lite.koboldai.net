@@ -23041,6 +23041,14 @@ Current version indicated by LITEVER below.
     const mapWordsAPIsimple = {
         "definition": "Definition:"
     }
+    const globalSelection = {
+        originalPhrase: null,
+        start_in_sentence: null,
+        end_in_sentence: null,
+        arrayOfSynonymsIndexes: [],
+        updatedPhrase: null,
+        isCustomEdit: false
+    }
 
     async function getThesaurusData() {
         const queryInput = document.getElementById("id-rightpanel-thesaurus-query")
@@ -23087,23 +23095,32 @@ Current version indicated by LITEVER below.
         parentElement.append(hr);
     }
 
-        function updateTextWithItemFromThesaurus(item) {
-            const gametextSelection = window.getSelection();
-            gametextSelection.removeAllRanges();
-            gametextSelection.addRange(lastSelectedWord.gametextRange);
-            const focusNode = gametextSelection.focusNode;
-            const sliced1 = focusNode.textContent.slice(gametextSelection.focusOffset);
-            focusNode.textContent = item + sliced1;
+    function updateTextWithItemFromThesaurus(item) {
+        const gametextSelection = window.getSelection();
+        gametextSelection.removeAllRanges();
+        gametextSelection.addRange(lastSelectedWord.gametextRange);
+        const focusNode = gametextSelection.focusNode;
+        console.error("updateTextWithItemFromThesaurus::focusNode.textContent:", `${focusNode.textContent}`, "=>'", item, "'#")
+        const sliced1 = focusNode.textContent.slice(gametextSelection.focusOffset);
+        focusNode.textContent = item + sliced1;
 
-            // Restore selection
-            const range = document.createRange();
-            range.setStart(focusNode, 0);
-            range.setEnd(focusNode, item.length);
-            gametextSelection.removeAllRanges();
-            gametextSelection.addRange(range);
+        // Restore selection
+        const range = document.createRange();
+        range.setStart(focusNode, 0);
+        range.setEnd(focusNode, item.length);
+        gametextSelection.removeAllRanges();
+        gametextSelection.addRange(range);
 
-            closeThesaurus(true, false)
-        }
+        // clean state
+        const synonymModInput = document.getElementById("thesaurus-synonym-mod-input")
+        synonymModInput.value = ""
+        globalSelection.originalPhrase = null;
+        globalSelection.start_in_sentence = null;
+        globalSelection.end_in_sentence = null;
+        globalSelection.arrayOfSynonymsIndexes = []
+        globalSelection.updatedPhrase = null
+        closeThesaurus(true, false)
+    }
 
     function parseThesaurusData(thesaurusJsonData, source) {
         function createList(items, isEditable) {
@@ -23176,6 +23193,31 @@ Current version indicated by LITEVER below.
 
     async function openThesaurus() {
         showElementById("id-rightpanel-thesaurus")
+
+        const iseditable = document.getElementById("allowediting")
+        const buttonConfirmation = document.getElementById("thesaurus-synonym-mod-confirm-button")
+        const synonymModInput = document.getElementById("thesaurus-synonym-mod-input")
+
+        // Logic to handle manual edits
+        synonymModInput.oninput = () => {
+            console.log("Manual edit detected.");
+            globalSelection.isCustomEdit = true;
+            // Deselect all buttons as their state is no longer valid
+            document.querySelectorAll('.inflated-synonym-option.synonym-selected').forEach(btn => {
+                btn.classList.remove('synonym-selected');
+            });
+        };
+
+        // Initialize the input with the current phrase from the global state. Correct????
+        updateSynonymModInput("openThesaurus");
+
+        if (!iseditable.checked) {
+            buttonConfirmation.disabled = true
+        } else {
+            try {
+                buttonConfirmation.removeAttribute("disabled")
+            } catch {/* skip actions if no disabled attribute */}
+        }
     }
 
     function closeThesaurus(fireNewSearch=true, renderGametext=true) {
@@ -23193,6 +23235,9 @@ Current version indicated by LITEVER below.
 
     function parseInflatedSynonymResponse(response) {
         if (!response || !response.success) {
+            console.error(`parseInflatedSynonymResponse::error on parsing response.`);
+            hideElementById("id-rightpanel-thesaurus-waiting");
+            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "error on parsing response.")
             throw new Error(response?.error || 'Invalid response format');
         }
 
@@ -23206,17 +23251,50 @@ Current version indicated by LITEVER below.
         };
     }
 
-    function createInflatedSynonymUI(synonymData) {
-        const container = document.createElement('div');
-        container.className = 'inflated-synonym-container';
-        container.id = 'content-inflated-synonyms';
+    function parseInflatedSynonymPhraseResponse(response) {
+        if (!response || !response.success) {
+            hideElementById("id-rightpanel-thesaurus-waiting");
+            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "error on parsing phrase response.")
+            throw new Error(response?.message || 'Invalid phrase response format');
+        }
+
+        const parsedResults = response.results.map(result => {
+            // Manually map the snake_case properties from the Python backend
+            return {
+                originalWord: result.original_word,
+                originalIndices: result.original_indices,
+                contextInfo: result.context_info,
+                synonymGroups: result.synonym_groups,
+                debugInfo: result.debug_info,
+                message: result.message
+            };
+        });
+
+        return {
+            success: response.success,
+            originalPhrase: response.original_phrase,
+            originalIndices: response.original_indices,
+            results: parsedResults,
+            message: response.message
+        };
+    }
+
+    function createSynonymGroupFromResult(i, result) {
+        const containerNth = document.createElement("div")
+        containerNth.className = 'inflated-synonym-container border-yellow';
+        containerNth.id = `content-inflated-synonyms-${i}nth`;
 
         // Header with original word and context
         const header = document.createElement('div');
-        header.className = 'inflated-synonym-header';
+        header.className = `inflated-synonym-header`;
 
         const headerTitle = document.createElement('h2');
-        headerTitle.textContent = `Smart Synonyms for "${synonymData.originalWord}"`;
+        const originalWordSpan = document.createElement("span")
+        originalWordSpan.innerText = `${result.originalWord}`;
+        originalWordSpan.id = `thesaurus-original-word-span-${i}nth`
+        originalWordSpan.className = "thesaurus-original-word-span"
+        headerTitle.textContent = `Smart Synonyms for `;
+        headerTitle.appendChild(originalWordSpan)
         header.appendChild(headerTitle);
 
         const contextInfoDiv = document.createElement('div');
@@ -23227,7 +23305,7 @@ Current version indicated by LITEVER below.
         const posStrong = document.createElement('strong');
         posStrong.textContent = 'Part of Speech:';
         posP.appendChild(posStrong);
-        posP.appendChild(document.createTextNode(` ${synonymData.contextInfo.pos} (${synonymData.contextInfo.grammatical_form})`));
+        posP.appendChild(document.createTextNode(` ${result.contextInfo.pos} (${result.contextInfo.grammatical_form})`));
         contextInfoDiv.appendChild(posP);
 
         // Context paragraph
@@ -23235,7 +23313,7 @@ Current version indicated by LITEVER below.
         const contextStrong = document.createElement('strong');
         contextStrong.textContent = 'Context:';
         contextP.appendChild(contextStrong);
-        contextP.appendChild(document.createTextNode(` ${synonymData.contextInfo.sentence}`));
+        contextP.appendChild(document.createTextNode(` ${result.contextInfo.sentence}`));
         contextInfoDiv.appendChild(contextP);
 
         // Dependency paragraph
@@ -23243,27 +23321,27 @@ Current version indicated by LITEVER below.
         const depStrong = document.createElement('strong');
         depStrong.textContent = 'Dependency:';
         depP.appendChild(depStrong);
-        depP.appendChild(document.createTextNode(` ${synonymData.contextInfo.dependency}`));
+        depP.appendChild(document.createTextNode(` ${result.contextInfo.dependency}`));
         contextInfoDiv.appendChild(depP);
 
         header.appendChild(contextInfoDiv);
-        container.appendChild(header);
+        containerNth.appendChild(header);
 
         // Check if no synonyms found
-        if (!synonymData.synonymGroups || synonymData.synonymGroups.length === 0) {
+        if (!result.synonymGroups || result.synonymGroups.length === 0) {
             const noSynonyms = document.createElement('div');
             noSynonyms.className = 'no-synonyms-message';
 
             const noSynonymsP = document.createElement('p');
-            noSynonymsP.textContent = synonymData.message || 'No synonyms found for this word.';
+            noSynonymsP.textContent = result.message || 'No synonyms found for this word.';
             noSynonyms.appendChild(noSynonymsP);
 
-            container.appendChild(noSynonyms);
-            return container;
+            containerNth.appendChild(noSynonyms);
+            return containerNth;
         }
 
         // Synonym groups
-        synonymData.synonymGroups.forEach((group, groupIndex) => {
+        result.synonymGroups.forEach((group, groupIndex) => {
             const groupDiv = document.createElement('div');
             groupDiv.className = 'inflated-synonym-group';
 
@@ -23346,20 +23424,23 @@ Current version indicated by LITEVER below.
                 if (!iseditable.checked) {
                     synonymButton.disabled = true
                 }
-                synonymButton.addEventListener('click', () => {
-                    applyInflatedSynonym(synonym.inflected_form, synonymData.originalWord);
-                });
+                    synonymButton.setAttribute('data-original-word', result.originalWord);
+                    synonymButton.addEventListener('click', () => {
+                        const {start, end} = result.originalIndices
+                        // Pass the button element itself for styling
+                        populateSynonymInputMod(synonym.inflected_form, result.originalWord, start, end, synonymButton)
+                    });
 
                 synonymContainer.appendChild(synonymButton);
                 synonymsList.appendChild(synonymContainer);
             });
 
             groupDiv.appendChild(synonymsList);
-            container.appendChild(groupDiv);
+            containerNth.appendChild(groupDiv);
         });
 
         // Debug info (optional, can be hidden in production)
-        if (synonymData.debugInfo) {
+        if (result.debugInfo) {
             const debugDiv = document.createElement('div');
             debugDiv.className = 'debug-info';
             debugDiv.style.fontSize = '0.8em';
@@ -23376,7 +23457,7 @@ Current version indicated by LITEVER below.
             const origIndicesStrong = document.createElement('strong');
             origIndicesStrong.textContent = 'Original Indices:';
             origIndicesP.appendChild(origIndicesStrong);
-            origIndicesP.appendChild(document.createTextNode(` ${synonymData.originalIndices.start}-${synonymData.originalIndices.end}`));
+            origIndicesP.appendChild(document.createTextNode(` ${result.originalIndices.start}-${result.originalIndices.end}`));
             details.appendChild(origIndicesP);
 
             // SpaCy Token Indices
@@ -23384,7 +23465,7 @@ Current version indicated by LITEVER below.
             const spacyIndicesStrong = document.createElement('strong');
             spacyIndicesStrong.textContent = 'SpaCy Token Indices:';
             spacyIndicesP.appendChild(spacyIndicesStrong);
-            spacyIndicesP.appendChild(document.createTextNode(` ${synonymData.debugInfo.spacy_token_indices.start}-${synonymData.debugInfo.spacy_token_indices.end}`));
+            spacyIndicesP.appendChild(document.createTextNode(` ${result.debugInfo.spacy_token_indices.start}-${result.debugInfo.spacy_token_indices.end}`));
             details.appendChild(spacyIndicesP);
 
             // Lemma
@@ -23392,34 +23473,125 @@ Current version indicated by LITEVER below.
             const lemmaStrong = document.createElement('strong');
             lemmaStrong.textContent = 'Lemma:';
             lemmaP.appendChild(lemmaStrong);
-            lemmaP.appendChild(document.createTextNode(` ${synonymData.debugInfo.lemma}`));
+            lemmaP.appendChild(document.createTextNode(` ${result.debugInfo.lemma}`));
             details.appendChild(lemmaP);
 
             debugDiv.appendChild(details);
-            container.appendChild(debugDiv);
+            containerNth.appendChild(debugDiv);
         }
-
-        return container;
+        return containerNth;
     }
 
-    function applyInflatedSynonym(selectedSynonym, originalWord) {
+    function createInflatedSynonymUI(synonymData) {
+        const container = document.createElement('div');
+        container.className = 'inflated-synonym-container';
+        container.id = 'content-inflated-synonyms-h1';
+
+        const h1phrase = document.createElement("h1")
+        h1phrase.innerText = `Original phrase: ${synonymData.originalPhrase}`;
+        globalSelection.originalPhrase = `${synonymData.originalPhrase}`
+        container.append(h1phrase)
+        const results = synonymData.results
+
+        results.forEach((result, i) => {
+            const containerNth = createSynonymGroupFromResult(i, result)
+            container.append(containerNth)
+        })
+        return container
+    }
+
+    function populateSynonymInputMod(synonymChosen, originalWord, startIdx, endIdx, clickedButton) {
+        // 1. Deselect any other button for the same original word
+        const buttonsForSameWord = document.querySelectorAll(`.inflated-synonym-option[data-original-word="${originalWord}"]`);
+        buttonsForSameWord.forEach(btn => btn.classList.remove('synonym-selected'));
+
+        // 2. Select the clicked button
+        if (clickedButton) {
+            clickedButton.classList.add('synonym-selected');
+        }
+
+        // 3. A button click means it's no longer a custom edit ---
+        globalSelection.isCustomEdit = false;
+
+        // Use find() to locate the specific item to update, which is more direct.
+        const targetItem = globalSelection.arrayOfSynonymsIndexes.find(item =>
+            item.originalWord === originalWord && item.start === startIdx && item.end === endIdx
+        );
+
+        if (targetItem) {
+            targetItem.synonymChosen = synonymChosen;
+        } else {
+            console.error("Could not find the target item to update in globalSelection.");
+        }
+        // Now, call the function to rebuild the preview string.
+        updateSynonymModInput("populateSynonymInputMod")
+    }
+
+    function updateSynonymModInput(origin) {
+        const originalPhrase = globalSelection.originalPhrase;
+        let updatedPhrase = "";
+        let lastIndex = 0;
+
+        // 1. Sort the synonyms by their start position to process from left-to-right.
+        const sortedSynonyms = [...globalSelection.arrayOfSynonymsIndexes].sort((a, b) => a.start - b.start);
+
+        // 2. Build the new string piece by piece.
+        sortedSynonyms.forEach(item => {
+            // Get the text from the original phrase that comes *before* this word.
+            updatedPhrase += originalPhrase.slice(lastIndex, item.start);
+
+            // Append the chosen synonym, or the original word if no synonym is selected yet.
+            updatedPhrase += item.synonymChosen || item.originalWord;
+
+            // Update our position to the end of the current word.
+            lastIndex = item.end;
+        });
+
+        // 3. Append any remaining text from the end of the original phrase.
+        updatedPhrase += originalPhrase.slice(lastIndex);
+
+        // 4. Update the input field and the global state.
+        globalSelection.updatedPhrase = updatedPhrase;
+
+        console.log(`updateSynonymModInput (from ${origin}): Updated phrase is now "${updatedPhrase}"`);
+    }
+
+    function confirmSynonymMod() {
+        const iseditable = document.getElementById("allowediting")
+        if (iseditable.checked) {
+            // Check which workflow is active
+            if (globalSelection.isCustomEdit) {
+                // Workflow 1: User typed manually. Use the input's value directly.
+                const synonymSubstitutionInput = document.getElementById("thesaurus-synonym-mod-input");
+                globalSelection.updatedPhrase = synonymSubstitutionInput.value;
+                console.log("Confirming with custom user input:", globalSelection.updatedPhrase);
+            } else {
+                // Workflow 2: Button-driven. The phrase is already built.
+                console.log("Confirming with programmatically built phrase:", globalSelection.updatedPhrase);
+                // No action needed, updatedPhrase is already correct.
+            }
+            applyInflatedSynonym();
+        }
+    }
+
+    function applyInflatedSynonym() {
         if (!lastSelectedWord.gametextRange) {
             console.error('No range selected for replacement');
             return;
         }
 
         try {
-            // Use the existing updateTextWithItemFromThesaurus logic
-            updateTextWithItemFromThesaurus(selectedSynonym);
-
+            updateTextWithItemFromThesaurus(globalSelection.updatedPhrase);
             // Close the inflated synonym UI
             const synonymContainer = document.querySelector('.inflated-synonym-container');
             if (synonymContainer) {
                 synonymContainer.remove();
             }
         } catch (error) {
-            console.error('Error applying synonym:', error, "#");
-            console.error('Tried to apply inflated synonym:', selectedSynonym, 'replacing:', originalWord, "#");
+            console.error(
+                'Error applying synonym:', error,
+                ", Tried to apply the globalSelection.updatedPhrase:", globalSelection.updatedPhrase,
+                ', replacing globalSelection.originalPhrase:', globalSelection.originalPhrase, "#");
             alert('Failed to apply synonym. Please try again.');
         }
     }
@@ -23648,9 +23820,10 @@ Current version indicated by LITEVER below.
         const yClientOffset = y - yBase - parseInt(height / 2)
         scrollToGivenPoint(editorElement, yClientOffset)
     }
+
     async function fetchSynonymsWithContext(fullText, start, end, selectedWord) {
         const payload = {
-            word: selectedWord.toLowerCase(),
+            word: selectedWord, // No need for toLowerCase() here, backend handles it
             text: fullText,
             start:start,
             end:end
@@ -23660,7 +23833,7 @@ Current version indicated by LITEVER below.
             const thesaurusDomainElement = document.getElementById("wordsearch_thesaurus_endpoint")
             const thesaurusDomain = thesaurusDomainElement.value || localsettings.wordsearch_thesaurus_endpoint;
 
-            const response = await fetch(`${thesaurusDomain}/thesaurus-inflated`, {
+            const response = await fetch(`${thesaurusDomain}/thesaurus-inflated-phrase`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -23669,11 +23842,16 @@ Current version indicated by LITEVER below.
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: '${response.status}'`);
+                const errorData = await response.json();
+                hideElementById("id-rightpanel-thesaurus-waiting");
+                showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "error on fetching synonym response.")
+                throw new Error(`HTTP error! status: '${response.status}', message: '${errorData.detail}'`);
             }
             return await response.json();
         } catch (error) {
             console.error('fetchSynonymsWithContext::Error fetching synonyms:', error, "#");
+            hideElementById("id-rightpanel-thesaurus-waiting");
+            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "unespected error on fetching synonym response.")
             throw error;
         }
     }
@@ -23798,6 +23976,14 @@ Current version indicated by LITEVER below.
             const clonedRange = range.cloneRange();
             btn.onclick = async () => {
                 try {
+                    // Reset the global state before starting a new selection
+                    globalSelection.originalPhrase = null;
+                    globalSelection.start_in_sentence = null;
+                    globalSelection.end_in_sentence = null;
+                    globalSelection.arrayOfSynonymsIndexes = [];
+                    globalSelection.updatedPhrase = null;
+                    globalSelection.isCustomEdit = false;
+
                     lastSelectedWord.gametextRange = null;
                     const sel = window.getSelection();
                     sel.removeAllRanges();
@@ -23808,7 +23994,18 @@ Current version indicated by LITEVER below.
                     // Fetch inflated synonyms
                     const synonymsResponse = await fetchSynonymsWithContext(sentence, start_in_sentence, end_in_sentence, word)
                     // Parse the response
-                    const synonymData = parseInflatedSynonymResponse(synonymsResponse);
+                    const synonymData = parseInflatedSynonymPhraseResponse(synonymsResponse);
+                    globalSelection.originalPhrase = `${synonymData.originalPhrase}`
+                    globalSelection.start_in_sentence = start_in_sentence
+                    globalSelection.end_in_sentence = end_in_sentence
+
+                    // prepare synonym substitutions
+                    synonymData.results.forEach((result, i) => {
+                        const originalWord = result.originalWord
+                        const start = result.originalIndices.start
+                        const end = result.originalIndices.end
+                        globalSelection.arrayOfSynonymsIndexes.push({originalWord, start, end, synonymChosen: null})
+                    })
 
                     lastSelectedWord.gametextRange = clonedRange.cloneRange();
                     removeClassById(underlinedClickedUrl);
@@ -23954,8 +24151,8 @@ Current version indicated by LITEVER below.
         }
         #id-rightpanel-thesaurus-content-data {
             overflow-y: auto;
-            max-height: 100%;
-            height: 100%;
+            max-height: 90%;
+            height: 90%;
         }
         #wordsearch_sort {
             padding:0;
@@ -24040,6 +24237,9 @@ Current version indicated by LITEVER below.
             background-color: #cccccc;
             color: #666666;
         }
+        .inflated-synonym-option.synonym-selected {
+            background: green;
+        }
 
         .inflected-form {
             font-weight: bold;
@@ -24075,6 +24275,13 @@ Current version indicated by LITEVER below.
 
         .debug-info details {
             cursor: pointer;
+        }
+        .border-yellow{
+            border: 2px yellow solid;
+        }
+        .thesaurus-original-word-span::after,
+        .thesaurus-original-word-span::before {
+            content: "'";
         }
     </style>
 </head>
@@ -24213,6 +24420,23 @@ Current version indicated by LITEVER below.
                                 <span id="id-rightpanel-thesaurus-error" aria-label="d-dialog-thesaurus-error" class="hidden">Error!</span>
                                 <div id="id-rightpanel-thesaurus-content">
                                     <div id="id-rightpanel-thesaurus-content-data"></div>
+                                    <input
+                                            title="synonym mod Input"
+                                            class="form-control menuinput_inline"
+                                            style="width: calc(100% - 34px); margin-right:2px;"
+                                            type="search"
+                                            placeholder="synonym(s) substitution"
+                                            value=""
+                                            id="thesaurus-synonym-mod-input"
+                                    >
+                                    <button
+                                            title="confirm synonym mod"
+                                            type="button"
+                                            class="btn btn-primary"
+                                            onclick="confirmSynonymMod()"
+                                            id="thesaurus-synonym-mod-confirm-button"
+                                            aria-label="thesaurus-synonym-mod-confirm-button"
+                                    >confirm</button>
                                 </div>
                             </div>
                         </div>
