@@ -23056,21 +23056,46 @@ Current version indicated by LITEVER below.
         parentElement.append(hr);
     }
 
+    function isSafari() {
+        return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    }
+
     function updateTextWithItemFromThesaurus(item) {
         const gametextSelection = window.getSelection();
-        gametextSelection.removeAllRanges();
-        gametextSelection.addRange(lastSelectedWord.gametextRange);
         const focusNode = gametextSelection.focusNode;
-        console.error("updateTextWithItemFromThesaurus::focusNode.textContent:", `${focusNode.textContent}`, "=>'", item, "'#")
-        const sliced1 = focusNode.textContent.slice(gametextSelection.focusOffset);
-        focusNode.textContent = item + sliced1;
 
-        // Restore selection
-        const range = document.createRange();
-        range.setStart(focusNode, 0);
-        range.setEnd(focusNode, item.length);
-        gametextSelection.removeAllRanges();
-        gametextSelection.addRange(range);
+        if (focusNode && focusNode.nodeType === Node.TEXT_NODE) {
+            // Safari-specific workaround
+            if (isSafari()) {
+                const originalText = focusNode.textContent;
+                const start = lastSelectedWord.gametextRange.startOffset;
+                const end = lastSelectedWord.gametextRange.endOffset;
+
+                const before = originalText.substring(0, start);
+                const after = originalText.substring(end);
+                const newText = before + item + after;
+
+                focusNode.textContent = newText;
+
+                // Restore selection (optional, adjust as needed)
+                gametextSelection.removeAllRanges();
+                const range = document.createRange();
+                range.setStart(focusNode, start);
+                range.setEnd(focusNode, start + item.length);
+                gametextSelection.addRange(range);
+            } else {
+                // Existing code for other browsers
+
+                const sliced1 = focusNode.textContent.slice(gametextSelection.focusOffset);
+                focusNode.textContent = item + sliced1;
+
+                const range = document.createRange();
+                range.setStart(focusNode, 0);
+                range.setEnd(focusNode, item.length);
+                gametextSelection.removeAllRanges();
+                gametextSelection.addRange(range);
+            }
+        }
 
         // clean state
         const synonymModInput = document.getElementById("thesaurus-synonym-mod-input")
@@ -23905,9 +23930,6 @@ Current version indicated by LITEVER below.
             };
         }
 
-        function isSafari() {
-            return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-        }
         function createResultButton(nearbytext, range, idParent, i) {
             const btn = createBtnWordsearchResults(`id-div-${idParent}-range-${i}-nth`, `id-${idParent}-range-${i}-nth`, [
                     {idContent: `id-${idParent}-wordsearch-result-before-${i}-nth`, cssClass: "color_wordsearch_surrounding", textContent: `${nearbytext.before}`},
