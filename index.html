@@ -23645,6 +23645,8 @@ Current version indicated by LITEVER below.
 
         const h1phrase = document.createElement("h1")
         h1phrase.innerText = `Original phrase: ${synonymData.originalPhrase}`;
+        h1phrase.id = `id-content-inflated-synonyms-container-h1-original-phrase`
+        h1phrase.setAttribute("aria-label", `id-content-inflated-synonyms-container-h1-original-phrase`)
         globalSelection.originalPhrase = `${synonymData.originalPhrase}`
         container.append(h1phrase)
         const results = synonymData.results
@@ -24658,7 +24660,7 @@ Current version indicated by LITEVER below.
                                 <span id="id-rightpanel-thesaurus-waiting" aria-label="d-dialog-thesaurus-waiting" class="hidden">waiting...</span>
                                 <span id="id-rightpanel-thesaurus-error" aria-label="d-dialog-thesaurus-error" class="hidden">Error!</span>
                                 <div id="id-rightpanel-thesaurus-content">
-                                    <div id="id-rightpanel-thesaurus-content-data" aria-describedby="id-rightpanel-thesaurus-content-data"></div>
+                                    <div id="id-rightpanel-thesaurus-content-data" aria-label="id-rightpanel-thesaurus-content-data"></div>
                                 </div>
                             </div>
                         </div>
@@ -24690,8 +24692,8 @@ Current version indicated by LITEVER below.
                                             </div>
                                         </div>
                                         <div id="thesaurus-custom-form-groups-container">
-                                            <div id="thesaurus-custom-form-groups-parent" aria-describedby="thesaurus-custom-form-groups-parent" class="overflow-hidden">
-                                                <div id="thesaurus-custom-form-groups" aria-describedby="thesaurus-custom-form-groups" class="overflow-auto">
+                                            <div id="thesaurus-custom-form-groups-parent" aria-label="thesaurus-custom-form-groups-parent" class="overflow-hidden">
+                                                <div id="thesaurus-custom-form-groups" aria-label="thesaurus-custom-form-groups" class="overflow-auto">
                                                 </div>
                                             </div>
                                         </div>
