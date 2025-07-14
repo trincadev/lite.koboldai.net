@@ -23128,7 +23128,7 @@ Current version indicated by LITEVER below.
     }
     function closeThesaurusCustomForm() {
         const customFormGroups = document.getElementById("thesaurus-custom-form-groups")
-        customFormGroups.remove()
+        customFormGroups.replaceChildren()
         document.getElementById("thesaurus-custom-word").value = ""
         const sel0 = document.getElementById("thesaurus-custom-related-type-0nth")
         sel0.selectedIndex = 0
@@ -23138,20 +23138,19 @@ Current version indicated by LITEVER below.
     }
     async function submitThesaurusCustom() {
         const thesaurusCustomFormWordInput = document.getElementById("thesaurus-custom-word");
-
         const word = thesaurusCustomFormWordInput.value;
 
-        // **1. Validate main word input**
+        // Validate main word input
         if (!word) {
           alert("Please enter a word.");
           return;
         }
 
-        // **2. Prepare to collect related entries**
+        // Prepare to collect related entries**
         const relatedEntries = [];
         const numEntries = thesaurusCustomStatus.countPlus; // Capture the current count
 
-        // **3. Iterate through the dynamic form groups**
+        // Iterate through the dynamic form groups
         for (let i = 0; i <= numEntries; i++) {
           const typeId = `thesaurus-custom-related-type-${i}nth`;
           const wordsId = `thesaurus-custom-related-words-${i}nth`;
@@ -23161,7 +23160,7 @@ Current version indicated by LITEVER below.
           const wordsInput = document.getElementById(wordsId);
           const definitionTextarea = document.getElementById(definitionId);
 
-          // **4. Error handling: Check if elements exist**
+          // Error handling: Check if elements exist
           if (!typeSelect || !wordsInput) {
             console.warn(`Element with id ${typeId} or ${wordsId} not found. Skipping.`);
             continue; // Skip to the next entry
@@ -23171,7 +23170,7 @@ Current version indicated by LITEVER below.
           const words = wordsInput.value.split(",").map(w => w.trim());
           const definition = definitionTextarea.value;
 
-          // **5. Validate related words input**
+          // Validate related words input
           if (!wordsInput.value) {
             alert("Please enter related words for each entry.");
             return;
@@ -23184,8 +23183,7 @@ Current version indicated by LITEVER below.
           });
         }
 
-        console.error("submitThesaurusCustom::relatedEntries:", relatedEntries, "#")
-        // **6. Prepare the request body**
+        // Prepare the request body
         const requestBody = {
           "word": word,
           "related": relatedEntries
@@ -23193,7 +23191,6 @@ Current version indicated by LITEVER below.
         try {
           const thesaurusDomainElement = document.getElementById("wordsearch_thesaurus_endpoint")
           const thesaurusDomain = thesaurusDomainElement.value || localsettings.wordsearch_thesaurus_endpoint;
-          console.error("submitThesaurusCustom::requestBody:", requestBody, "@#")
           const response = await fetch(`${thesaurusDomain}/thesaurus-custom`, {
             method: 'POST',
             headers: {
@@ -23209,7 +23206,7 @@ Current version indicated by LITEVER below.
             throw new Error(`HTTP error! status: '${response.status}', message: '${errorData.detail}'`);
           }
 
-          // **7. Success message and close form**
+          // Success message and close form
           console.log("new thesaurus custom entry:", await response.json(), "#")
           alert("Thesaurus entry added successfully!"); // Provide user feedback
           closeThesaurusCustomForm()
