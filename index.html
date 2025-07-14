@@ -23028,6 +23028,62 @@ Current version indicated by LITEVER below.
 		}
 	});
 
+    /* Thesaurus custom entries functionality */
+    function openThesaurusCustomForm() {
+        showElementById("thesaurus-custom-form-container")
+    }
+    function closeThesaurusCustomForm() {
+        hideElementById("thesaurus-custom-form-container")
+    }
+    async function submitThesaurusCustom() {
+        const thesaurusCustomFormWordInput = document.getElementById("thesaurus-custom-word");
+        const thesaurusCustomFormRelatedTypeSelect = document.getElementById("thesaurus-custom-related-type");
+        const thesaurusCustomFormRelatedWordsInput = document.getElementById("thesaurus-custom-related-words");
+        const thesaurusCustomFormRelatedDefinitionTextarea = document.getElementById("thesaurus-custom-related-definition");
+
+        const word = thesaurusCustomFormWordInput.value;
+        const type = thesaurusCustomFormRelatedTypeSelect.value;
+        const words = thesaurusCustomFormRelatedWordsInput.value.split(",").map(w => w.trim());
+        const definition = thesaurusCustomFormRelatedDefinitionTextarea.value;
+
+        const requestBody = {
+            "word": word,
+            "related": [
+                {
+                    "type": type,
+                    "words": words,
+                    "definition": definition
+                }
+            ]
+        };
+        try {
+            const thesaurusDomainElement = document.getElementById("wordsearch_thesaurus_endpoint")
+            const thesaurusDomain = thesaurusDomainElement.value || localsettings.wordsearch_thesaurus_endpoint;
+
+            const response = await fetch(`${thesaurusDomain}/thesaurus-custom`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                hideElementById("id-rightpanel-thesaurus-waiting");
+                showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "error on fetching synonym response.")
+                throw new Error(`HTTP error! status: '${response.status}', message: '${errorData.detail}'`);
+            }
+            console.error("new thesaurus custom entry:", await response.json(), "#")
+            closeThesaurusCustomForm()
+        } catch (error) {
+            console.error('fetchSynonymsWithContext::Error fetching synonyms:', error, "#");
+            hideElementById("id-rightpanel-thesaurus-waiting");
+            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "unespected error on fetching synonym response.")
+            throw error;
+        }
+    }
+
     /* Thesaurus functionality */
     const mapWordsAPIlists = {
         "synonyms": 'Synonyms:',
@@ -24083,13 +24139,13 @@ Current version indicated by LITEVER below.
         #id-rightpanel-thesaurus-close-parent {
             display: flex;
         }
-        #id-rightpanel-thesaurus-close {
+        .id-rightpanel-thesaurus-close {
             color: #fff;
             background-color: red;
             border-color: #2e6da4;
             /*margin-left: auto;*/
         }
-        #id-rightpanel-thesaurus {
+        #id-rightpanel-thesaurus, #thesaurus-custom-form-container {
             position: fixed;
             z-index: 1;
             right: 0;
@@ -24100,7 +24156,7 @@ Current version indicated by LITEVER below.
             background-color: rgba(0,0,0,0.4);
         }
 
-        #id-rightpanel-thesaurus-content-parent {
+        #id-rightpanel-thesaurus-content-parent, #thesaurus-custom-form-content-parent {
             background: #292929;
             margin: auto 0 auto auto;
             padding: 20px;
@@ -24247,6 +24303,35 @@ Current version indicated by LITEVER below.
         .thesaurus-original-word-span::before {
             content: "'";
         }
+
+        /* thesaurus custom entries */
+        #thesaurus-custom-form {
+            margin-top: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+
+        #thesaurus-custom-form label {
+            display: inline-block;
+            width: 150px;
+            margin-right: 10px;
+        }
+
+        #thesaurus-custom-form input[type="text"],
+        #thesaurus-custom-form textarea,
+        #thesaurus-custom-form select {
+            width: 250px;
+            padding: 5px;
+            border: 1px solid #ddd;
+        }
+
+        #thesaurus-custom-form button {
+            margin: 5px;
+            padding: 8px 12px;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -24372,12 +24457,13 @@ Current version indicated by LITEVER below.
                             <option value="0">Frequency sort</option>
                             <option value="1">Alphabetic sort</option>
                         </select>
+                        <button id="thesaurus-custom-button-external" aria-label="thesaurus-custom-button-external" title="Add Custom Thesaurus Entry" class="btn btn-primary" onclick="openThesaurusCustomForm()">+Thesaurus</button>
 					</div>
                     <div>
                         <div id="id-rightpanel-thesaurus" aria-label="id-rightpanel-thesaurus" class="hidden">
                             <div id="id-rightpanel-thesaurus-content-parent">
                                 <div id="id-rightpanel-thesaurus-close-parent">
-                                    <button id="id-rightpanel-thesaurus-close" aria-label="id-rightpanel-thesaurus-close" type="button" class="btn" onclick="closeThesaurus()">X</button>
+                                    <button id="id-rightpanel-thesaurus-close" aria-label="id-rightpanel-thesaurus-close" type="button" class="btn id-rightpanel-thesaurus-close" onclick="closeThesaurus()">X</button>
                                     <input
                                             title="synonym mod Input"
                                             class="form-control menuinput_inline"
@@ -24395,12 +24481,43 @@ Current version indicated by LITEVER below.
                                             id="thesaurus-synonym-mod-confirm-button"
                                             aria-label="thesaurus-synonym-mod-confirm-button"
                                     >confirm</button>
+                                    <button id="thesaurus-custom-button-internal0" aria-label="thesaurus-custom-button-internal0" title="Add Custom Thesaurus Entry" class="btn btn-primary" onclick="openThesaurusCustomForm()">+Thesaurus</button>
                                 </div>
                                 <span id="id-rightpanel-thesaurus-waiting" aria-label="d-dialog-thesaurus-waiting" class="hidden">waiting...</span>
                                 <span id="id-rightpanel-thesaurus-error" aria-label="d-dialog-thesaurus-error" class="hidden">Error!</span>
                                 <div id="id-rightpanel-thesaurus-content">
                                     <div id="id-rightpanel-thesaurus-content-data" aria-label="id-rightpanel-thesaurus-content-data"></div>
                                 </div>
+                            </div>
+                        </div>
+                        <div id="thesaurus-custom-form-container" aria-label="thesaurus-custom-form-container" class="hidden">
+                            <div id="thesaurus-custom-form-content-parent" aria-label="thesaurus-custom-form-content-parent">
+                                <!-- Custom Thesaurus Form -->
+                                <div id="thesaurus-custom-form" aria-label="thesaurus-custom-form">
+                                    <h2>Add Custom Thesaurus Entry</h2>
+
+                                    <label for="thesaurus-custom-word">Word:</label>
+                                    <input type="text" id="thesaurus-custom-word" name="word" aria-label="thesaurus-custom-word" required class="form-control menuinput_inline"><br><br>
+
+                                    <label for="thesaurus-custom-related-type">Relationship Type:</label>
+                                    <select id="thesaurus-custom-related-type" name="type" aria-label="thesaurus-custom-related-type" class="form-control">
+                                        <option value="synonym">Synonym</option>
+                                        <option value="antonym">Antonym</option>
+                                        <option value="homonym">Homonym</option>
+                                        <option value="homophone">Homophone</option>
+                                        <option value="homograph">Homograph</option>
+                                    </select><br><br>
+
+                                    <label for="thesaurus-custom-related-words">Related Words (comma-separated):</label>
+                                    <input type="text" id="thesaurus-custom-related-words" name="words" aria-label="thesaurus-custom-related-words" required class="form-control menuinput_inline"><br><br>
+
+                                    <label for="thesaurus-custom-related-definition">Definition (Optional):</label>
+                                    <textarea id="thesaurus-custom-related-definition" name="definition" aria-label="thesaurus-custom-related-definition" class="form-control menuinput_inline"></textarea><br><br>
+
+                                    <button type="button" id="thesaurus-custom-submit" aria-label="thesaurus-custom-submit" class="btn btn-primary" onclick="submitThesaurusCustom()">Submit</button>
+                                    <button type="button" id="thesaurus-custom-cancel" aria-label="thesaurus-custom-cancel" class="btn id-rightpanel-thesaurus-close" onclick="closeThesaurusCustomForm()">Cancel</button>
+                                </div>
+                                <!-- End Custom Thesaurus Form -->
                             </div>
                         </div>
                     </div>
