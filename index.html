@@ -23579,7 +23579,7 @@ Current version indicated by LITEVER below.
         // Debug info (optional, can be hidden in production)
         if (result.debugInfo) {
             const debugDiv = document.createElement('div');
-            debugDiv.className = 'debug-info';
+            debugDiv.className = 'thesaurus-debug-info';
             debugDiv.style.fontSize = '0.8em';
             debugDiv.style.color = '#666';
             debugDiv.id = `debug-div-${i}`;
@@ -24292,19 +24292,19 @@ Current version indicated by LITEVER below.
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgb(0,0,0);
-            background-color: rgba(0,0,0,0.4);
+            background: rgb(0,0,0);
+            background: rgba(0,0,0,0.4);
         }
 
         #id-rightpanel-thesaurus-content-parent, #thesaurus-custom-form-content-parent {
             background: #292929;
             margin: auto 0 auto auto;
-            padding: 20px;
+            padding: 4px;
             /* margin: 10vh auto; */
             border: 1px solid #888;
             max-width: 32vw;
             min-width: 300px;
-            height: 100vh;
+            height: 100%;
         }
         #id-rightpanel-thesaurus-content {
             overflow: hidden;
@@ -24318,7 +24318,7 @@ Current version indicated by LITEVER below.
         }
         .overflow-hidden {
             overflow: hidden;
-            height: 60vh;
+            height: calc(100vh - 360px);
         }
         .overflow-auto {
             overflow-y: auto;
@@ -24435,13 +24435,12 @@ Current version indicated by LITEVER below.
             font-style: italic;
         }
 
-        .debug-info {
+        .thesaurus-debug-info {
             margin-top: 20px;
             border-top: 1px solid #ddd;
             padding-top: 10px;
         }
-
-        .debug-info details {
+        .thesaurus-debug-info details {
             cursor: pointer;
         }
         .border-yellow{
@@ -24453,11 +24452,8 @@ Current version indicated by LITEVER below.
         }
 
         /* thesaurus custom entries */
-        #id-thesaurus-custom-form {
-
-        }
         #thesaurus-custom-word {
-            margin: 10px 0 24px 0;
+            margin: 10px 0 10px 0;
         }
         #id-thesaurus-custom-form-border {
             border: 1px solid #ccc;
@@ -24472,15 +24468,6 @@ Current version indicated by LITEVER below.
             margin: 0 0 20px 0;
             padding: 4px 0 4px 0;
         }
-
-        /*
-        .thesaurus-custom-form-input[type="text"],
-        .thesaurus-custom-form-textarea,
-        .thesaurus-custom-form-select {
-            width: 250px;
-            padding: 5px;
-            border: 1px solid #ddd;
-        }*/
         #thesaurus-custom-form-select {
             width: 150px;
             margin-bottom: 6px;
@@ -24498,13 +24485,107 @@ Current version indicated by LITEVER below.
         .background-red:hover {
             background: indianred;
         }
-
         #thesaurus-custom-form-btn {
             margin: 5px;
             padding: 8px 12px;
             color: white;
             border: none;
             cursor: pointer;
+        }
+        #thesaurus-synonym-mod-input {
+            width: calc(100% - 100px);
+            margin:2px;
+        }
+        /* Thesaurus form for custom entries */
+        #id-thesaurus-container h1,
+        #id-thesaurus-container h2,
+        #id-thesaurus-container h3,
+        #id-thesaurus-container h4,
+        #id-thesaurus-container h5,
+        #id-thesaurus-container h6 {
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+        #id-rightpanel-thesaurus-close-parent button {
+            margin: 2px;
+        }
+
+        @media (max-width: 666px), (max-height: 450px) {
+            #id-thesaurus-custom-form-border h3,
+            #id-thesaurus-custom-form-border .h3 {
+                font-size: 18px;
+            }
+            #id-thesaurus-custom-form-border h1,
+            #id-thesaurus-custom-form-border h2,
+            #id-thesaurus-custom-form-border h3,
+            #id-thesaurus-custom-form-border h4,
+            #id-thesaurus-custom-form-border h5,
+            #id-thesaurus-custom-form-border h6 {
+                margin-top: 6px;
+                margin-bottom: 2px;
+            }
+        }
+
+        @media (max-width: 666px) {
+            #thesaurus-custom-button-external,
+            #wordsearch_sort {
+                font-size: 10px;
+                padding: 2px;
+            }
+            #id-rightpanel-thesaurus-close,
+            #thesaurus-synonym-mod-confirm-button {
+                padding: 6px !important;
+            }
+            #id-rightpanel-thesaurus-close-parent button,
+            #id-rightpanel-thesaurus-close-parent input {
+                font-size: 14px;
+                padding: 2px;
+            }
+            #thesaurus-custom-word {
+                margin: 8px 0 16px 0;
+            }
+            .thesaurus-custom-form-group-content {
+                margin: 0 0 10px 0;
+            }
+        }
+
+        @media (max-height: 450px) {
+            .overflow-hidden {
+                height: calc(100vh - 280px);
+            }
+            #thesaurus-custom-form-content-parent {
+                padding: 4px;
+            }
+            #id-thesaurus-custom-form input,
+            #id-thesaurus-custom-form select,
+            #id-thesaurus-custom-form textarea.form-control,
+            #id-thesaurus-custom-form label {
+                font-size: 12px;
+                padding: 2px 4px 2px 4px;
+            }
+            #thesaurus-custom-word {
+                margin: 8px 0 8px 0;
+            }
+            .thesaurus-custom-form-group-content {
+                margin: 0;
+            }
+        }
+
+        /* Tablet Portrait */
+        @media (min-width: 667px) and (max-width: 768px) {
+            #thesaurus-custom-form-content-parent {
+                max-width: 60vw;
+            }
+        }
+
+        /* Tablet Landscape */
+        @media (min-width: 769px) and (max-width: 1024px) and (orientation: landscape) {
+            #id-thesaurus-custom-form input,
+            #id-thesaurus-custom-form select,
+            #id-thesaurus-custom-form textarea.form-control,
+            #id-thesaurus-custom-form label {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -24633,7 +24714,8 @@ Current version indicated by LITEVER below.
                         </select>
                         <button id="thesaurus-custom-button-external" aria-label="thesaurus-custom-button-external" title="Add Custom Thesaurus Entry" class="btn btn-primary" onclick="openThesaurusCustomForm()">+Thesaurus</button>
 					</div>
-                    <div>
+                    <div id="id-thesaurus-container">
+                        <!-- Thesaurus right panels results -->
                         <div id="id-rightpanel-thesaurus" aria-label="id-rightpanel-thesaurus" class="hidden">
                             <div id="id-rightpanel-thesaurus-content-parent">
                                 <div id="id-rightpanel-thesaurus-close-parent">
@@ -24641,9 +24723,8 @@ Current version indicated by LITEVER below.
                                     <input
                                             title="synonym mod Input"
                                             class="form-control menuinput_inline"
-                                            style="width: calc(100% - 100px); margin-right:2px;"
                                             type="search"
-                                            placeholder="synonym(s) substitution"
+                                            placeholder="synonym(s) edit/substitution"
                                             value=""
                                             id="thesaurus-synonym-mod-input"
                                     >
@@ -24654,7 +24735,7 @@ Current version indicated by LITEVER below.
                                             onclick="confirmSynonymButton()"
                                             id="thesaurus-synonym-mod-confirm-button"
                                             aria-label="thesaurus-synonym-mod-confirm-button"
-                                    >confirm</button>
+                                    >💾</button>
                                     <button type="button" id="thesaurus-custom-button-internal0" aria-label="thesaurus-custom-button-internal0" title="Add Custom Thesaurus Entry" class="btn btn-primary" onclick="openThesaurusCustomForm()">+Thesaurus</button>
                                 </div>
                                 <span id="id-rightpanel-thesaurus-waiting" aria-label="d-dialog-thesaurus-waiting" class="hidden">waiting...</span>
@@ -24664,14 +24745,14 @@ Current version indicated by LITEVER below.
                                 </div>
                             </div>
                         </div>
+                        <!-- End Thesaurus right panels results -->
+                        <!-- Custom Thesaurus Form -->
                         <div id="thesaurus-custom-form-container" aria-label="thesaurus-custom-form-container" class="hidden">
                             <div id="thesaurus-custom-form-content-parent" aria-label="thesaurus-custom-form-content-parent">
-                                <!-- Custom Thesaurus Form -->
                                 <div id="id-thesaurus-custom-form" aria-label="id-thesaurus-custom-form">
                                     <div id="id-thesaurus-custom-form-border">
                                         <h3>Add Custom Thesaurus Entry</h3>
                                         <input type="text" id="thesaurus-custom-word" name="thesaurus-custom-word" aria-label="thesaurus-custom-word" placeholder="Word (required)" required class="form-control menuinput_inline thesaurus-custom-form-input">
-
                                         <div id="thesaurus-custom-form-group-content-0nth" aria-label="thesaurus-custom-form-group-content-0nth" class="thesaurus-custom-form-group-content">
                                             <div style="display: flex;">
                                                 <button type="button" id="thesaurus-custom-related-btn-add-0nth" aria-label="thesaurus-custom-related-btn-add-0nth" class="btn btn-primary thesaurus-custom-related-btn-operation" onclick="addNewThesaurusCustomFormGroupElementWrapper()">+</button>
@@ -24698,13 +24779,14 @@ Current version indicated by LITEVER below.
                                             </div>
                                         </div>
                                     </div>
-
-                                    <button type="button" id="thesaurus-custom-submit" aria-label="thesaurus-custom-submit" class="btn btn-primary thesaurus-custom-form-btn" onclick="submitThesaurusCustom()">Submit</button>
-                                    <button type="button" id="thesaurus-custom-cancel" aria-label="thesaurus-custom-cancel" class="btn background-red" onclick="closeThesaurusCustomForm()">Cancel</button>
+                                    <div style="margin-top: 6px;">
+                                        <button type="button" id="thesaurus-custom-submit" aria-label="thesaurus-custom-submit" class="btn btn-primary thesaurus-custom-form-btn" onclick="submitThesaurusCustom()">Submit</button>
+                                        <button type="button" id="thesaurus-custom-cancel" aria-label="thesaurus-custom-cancel" class="btn background-red" onclick="closeThesaurusCustomForm()">Cancel</button>
+                                    </div>
                                 </div>
-                                <!-- End Custom Thesaurus Form -->
                             </div>
                         </div>
+                        <!-- End Custom Thesaurus Form -->
                     </div>
 					<div id="wordsearch_results" aria-label="wordsearch_results" style="height:calc(100% - 98px);overflow-y: auto;"></div>
 				</div>
