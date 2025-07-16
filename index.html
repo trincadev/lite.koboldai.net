@@ -23783,8 +23783,8 @@ Current version indicated by LITEVER below.
         return typeof Promise !== "undefined" && typeof Promise.prototype.finally === "function"
     }
     function getBestWordRegex() {
-        // Improved regex: matches words with internal apostrophes/hyphens, not surrounded by spaces
-        const unicodeRegex = new RegExp(String.raw`\p{L}[\p{L}\p{N}'’\-–—]*|\p{N}[\p{N}'’\-–—]*`, 'gu');
+        // matches words with internal apostrophes/hyphens, not surrounded by spaces
+        const unicodeRegex = /\p{L}[\p{L}\p{N}'’\-–—]*|\p{N}[\p{N}'’\-–—]*/gu
         const fallbackRegex = /\b[A-Za-z0-9]+(?:['’\-–—][A-Za-z0-9]+)*\b/g
         return isES2018PlusCompatible() ? unicodeRegex : fallbackRegex
     }
@@ -24274,8 +24274,6 @@ Current version indicated by LITEVER below.
         }
         #id-rightpanel-thesaurus-close-parent {
             display: flex;
-        }
-        .id-rightpanel-thesaurus-close {
         }
         .background-red {
             color: white;
