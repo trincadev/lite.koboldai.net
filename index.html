@@ -24116,7 +24116,6 @@ Current version indicated by LITEVER below.
             return {
                 start: anchorOffset,
                 end: focusOffset,
-                len: selection.focusNode.wholeText.length,
                 wholeText: selection.focusNode.wholeText,
                 word: word
             };
@@ -24146,7 +24145,7 @@ Current version indicated by LITEVER below.
                     sel.removeAllRanges();
                     sel.addRange(clonedRange.cloneRange());
 
-                    const {end, start, len, wholeText, word} = getSelectionTextNodeOffsets(clonedRange.cloneRange())
+                    const {end, start, wholeText, word} = getSelectionTextNodeOffsets(clonedRange.cloneRange())
                     const {sentence, start_in_sentence, end_in_sentence} = await getSingleSentence(wholeText, start, end, word)
                     // Fetch inflated synonyms
                     const synonymsResponse = await fetchSynonymsWithContext(sentence, start_in_sentence, end_in_sentence, word)
@@ -24298,7 +24297,6 @@ Current version indicated by LITEVER below.
             background: #292929;
             margin: auto 0 auto auto;
             padding: 4px;
-            /* margin: 10vh auto; */
             border: 1px solid #888;
             max-width: 32vw;
             min-width: 300px;
