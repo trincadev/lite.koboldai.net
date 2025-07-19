@@ -23733,18 +23733,7 @@ Current version indicated by LITEVER below.
         }
         return element;
     }
-    function createSelectWithOptListById(id, className, optionsArray) {
-        const select = createElementById("select", id, {className})
-        select.name = id
-        optionsArray.forEach(text => {
-            const option = document.createElement("option")
-            option.id = `${id}-${text}`
-            option.value = text
-            option.textContent = toPascalCase(text)
-            select.append(option)
-        })
-        return select
-    }
+
     function addNewThesaurusCustomFormGroupElementWrapper() {
         thesaurusCustomStatus.countPlus += 1
         addNewThesaurusCustomFormGroupElement(thesaurusCustomStatus.countPlus)
@@ -23756,12 +23745,8 @@ Current version indicated by LITEVER below.
     }
     function addNewThesaurusCustomFormGroupElement(n) {
         const thesaurusCustomFormGropus = document.getElementById("thesaurus-custom-form-groups")
-        const customFormNth = document.createElement("div")
-        customFormNth.id = `thesaurus-custom-form-group-content-${n}nth`
-        customFormNth.setAttribute("aria-label", `thesaurus-custom-form-group-content-${n}nth`)
-        customFormNth.className = "thesaurus-custom-form-group-content"
-        const div1 = document.createElement("div")
-        div1.style.display = "flex"
+        const customFormNth = createElementById("div", `thesaurus-custom-form-group-content-${n}nth`, {className:"thesaurus-custom-form-group-content"})
+        const div1 = createElementById("div", `parent-thesaurus-custom-related-btn-del-${n}nth`, {className: "display-flex"})
 
         const btnRemoveCustomGroup = createElementById("button", `thesaurus-custom-related-btn-del-${n}nth`,
             {
@@ -23771,13 +23756,23 @@ Current version indicated by LITEVER below.
         div1.append(btnRemoveCustomGroup)
 
         const div2 = document.createElement("div")
-        const div3 = document.createElement("div")
-        div3.style.display = "flex"
-        const label = document.createElement("label")
+        const div3 = createElementById("div", `parent-thesaurus-label-select-${n}nth`, {className: "display-flex"})
+        const label = createElementById("label", `thesaurus-label-select-${n}nth`, {className:"thesaurus-custom-related-type-label", innerText: "Relationship:"})
         label.htmlFor = `thesaurus-custom-related-type-${n}nth`
-        label.className = "thesaurus-custom-related-type-label"
-        label.textContent = "Relationship:"
-        const select = createSelectWithOptListById(`thesaurus-custom-related-type-${n}nth`, "form-control", ["synonym", "antonym", "homonym", "homophone", "homograph"])
+
+        const select = createElementById("select", `thesaurus-custom-related-type-${n}nth`, {className: "form-control"})
+        select.name = `thesaurus-custom-related-type-${n}nth`
+        const optionsArray = ["synonym", "antonym", "homonym", "homophone", "homograph"];
+        optionsArray.forEach(text => {
+            const option = document.createElement("option")
+            option.id = `thesaurus-custom-related-type-${n}nth-${text}`
+            option.className = "text-transform-capitalize"
+            option.innerText = toPascalCase(text)
+            // const option = createElementById("option", `thesaurus-custom-related-type-${n}nth-${text}`, {className:"text-transform-capitalize", innerText: toPascalCase(text)})
+            option.value = text
+            select.append(option)
+        })
+
         div3.append(label, select)
         const textarea1 = document.createElement("textarea")
         textarea1.id = `thesaurus-custom-related-words-${n}nth`
@@ -24947,7 +24942,7 @@ Current version indicated by LITEVER below.
             color: red;
             font-weight: bold;
         }
-        #id-rightpanel-thesaurus-close-parent {
+        .display-flex {
             display: flex;
         }
         .background-red {
@@ -25393,7 +25388,7 @@ Current version indicated by LITEVER below.
                         <!-- Thesaurus right panels results -->
                         <div id="id-rightpanel-thesaurus" aria-label="id-rightpanel-thesaurus" class="hidden">
                             <div id="id-rightpanel-thesaurus-content-parent">
-                                <div id="id-rightpanel-thesaurus-close-parent">
+                                <div id="id-rightpanel-thesaurus-close-parent" class="display-flex">
                                     <button id="id-rightpanel-thesaurus-close" aria-label="id-rightpanel-thesaurus-close" type="button" class="btn id-rightpanel-thesaurus-close background-red" onclick="closeThesaurus()">X</button>
                                     <input
                                             title="synonym mod Input"
