@@ -24034,43 +24034,25 @@ Current version indicated by LITEVER below.
         headerTitle.appendChild(originalWordSpan)
         header.appendChild(headerTitle);
 
-        const contextInfoDiv = document.createElement("div");
-        contextInfoDiv.className = "context-info";
-        contextInfoDiv.id = `context-info-div-${i}nth`;
-        contextInfoDiv.setAttribute("aria-label", `context-info-div-${i}nth`);
+        const contextInfoDiv = createElementById("div", `context-info-div-${i}nth`, {className: "context-info"});
 
         // Part of Speech paragraph
-        const posP = document.createElement("p");
-        posP.id = `pos-p-${i}nth`;
-        posP.setAttribute("aria-label", `pos-p-${i}nth`);
-        const posStrong = document.createElement("strong");
-        posStrong.textContent = "Part of Speech:";
-        posStrong.id = `pos-strong-${i}nth`;
-        posStrong.setAttribute("aria-label", `pos-strong-${i}nth`);
+        const posP = createElementById("p", `pos-p-${i}nth`);
+        const posStrong = createElementById("strong", `pos-strong-${i}nth`, {innerText: "Part of Speech:"});
         posP.appendChild(posStrong);
         posP.appendChild(document.createTextNode(` ${result.contextInfo.pos} (${result.contextInfo.grammatical_form})`));
         contextInfoDiv.appendChild(posP);
 
         // Context paragraph
-        const contextP = document.createElement("p");
-        contextP.id = `context-p-${i}nth`;
-        contextP.setAttribute("aria-label", `context-p-${i}nth`);
-        const contextStrong = document.createElement("strong");
-        contextStrong.textContent = "Context:";
-        contextStrong.id = `context-strong-${i}nth`;
-        contextStrong.setAttribute("aria-label", `context-strong-${i}nth`);
+        const contextP = createElementById("p", `context-p-${i}nth`);
+        const contextStrong = createElementById("strong", `context-strong-${i}nth`, {innerText: "Context:"});
         contextP.appendChild(contextStrong);
         contextP.appendChild(document.createTextNode(` ${result.contextInfo.sentence}`));
         contextInfoDiv.appendChild(contextP);
 
         // Dependency paragraph
-        const depP = document.createElement("p");
-        depP.id = `dep-p-${i}nth`;
-        depP.setAttribute("aria-label", `dep-p-${i}nth`);
-        const depStrong = document.createElement("strong");
-        depStrong.textContent = "Dependency:";
-        depStrong.id = `dep-strong-${i}nth`;
-        depStrong.setAttribute("aria-label", `dep-strong-${i}nth`);
+        const depP = createElementById("p", `dep-p-${i}nth`);
+        const depStrong = createElementById("strong", `dep-strong-${i}nth`, {innerText: "Dependency:"});
         depP.appendChild(depStrong);
         depP.appendChild(document.createTextNode(` ${result.contextInfo.dependency}`));
         contextInfoDiv.appendChild(depP);
@@ -24080,15 +24062,9 @@ Current version indicated by LITEVER below.
 
         // Check if no synonyms found
         if (!result.synonymGroups || result.synonymGroups.length === 0) {
-            const noSynonyms = document.createElement("div");
-            noSynonyms.className = "no-synonyms-message";
-            noSynonyms.id = `no-synonyms-${i}nth`;
-            noSynonyms.setAttribute("aria-label", `no-synonyms-${i}nth`);
+            const noSynonyms = createElementById("div", `no-synonyms-${i}nth`, {className: "no-synonyms-message"});
 
-            const noSynonymsP = document.createElement("p");
-            noSynonymsP.id = `no-synonyms-p-${i}nth`;
-            noSynonymsP.setAttribute("aria-label", `no-synonyms-p-${i}nth`);
-            noSynonymsP.textContent = result.message || "No synonyms found for this word.";
+            const noSynonymsP = createElementById("p", `no-synonyms-p-${i}nth`, {innerText: result.message || "No synonyms found for this word."});
             noSynonyms.appendChild(noSynonymsP);
 
             containerNth.appendChild(noSynonyms);
@@ -24097,110 +24073,61 @@ Current version indicated by LITEVER below.
 
         // Synonym groups
         result.synonymGroups.forEach((group, groupIndex) => {
-            const groupDiv = document.createElement("div");
-            groupDiv.className = "inflated-synonym-group";
-            groupDiv.id = `inflated-synonym-group-${i}-${groupIndex}`;
-            groupDiv.setAttribute("aria-label", `inflated-synonym-group-${i}-${groupIndex}`);
+           const groupDiv = createElementById("div", `inflated-synonym-group-${i}-${groupIndex}`,{className: "inflated-synonym-group"});
 
             insertSeparator(groupDiv);
 
             // Definition
-            const definition = document.createElement("div");
-            definition.className = "definition";
-            definition.id = `definition-div-${i}-${groupIndex}`;
-            definition.setAttribute("aria-label", `definition-div-${i}-${groupIndex}`);
+            const definition = createElementById("div", `definition-div-${i}-${groupIndex}`, {className: "definition"});
 
-            const defStrong = document.createElement("strong");
-            defStrong.textContent = "Definition:";
-            defStrong.id = `definition-strong-${i}-${groupIndex}`;
-            defStrong.setAttribute("aria-label", `definition-strong-${i}-${groupIndex}`);
+            const defStrong = createElementById("strong", `definition-strong-${i}-${groupIndex}`, { innerText:"Definition:"});
             definition.appendChild(defStrong);
             definition.appendChild(document.createTextNode(` ${group.definition}`));
             groupDiv.appendChild(definition);
 
             // Examples (if available)
             if (group.examples && group.examples.length > 0) {
-                const examples = document.createElement("div");
-                examples.className = "examples";
-                examples.id = `examples-div-${i}-${groupIndex}`;
-                examples.setAttribute("aria-label", `examples-div-${i}-${groupIndex}`);
+                const examples =  createElementById("div", `examples-div-${i}-${groupIndex}`, {className: "examples"});
 
-                const exStrong = document.createElement("strong");
-                exStrong.textContent = "Examples:";
-                exStrong.id = `examples-strong-${i}-${groupIndex}`;
-                exStrong.setAttribute("aria-label", `examples-strong-${i}-${groupIndex}`);
+            const exStrong =  createElementById("strong", `examples-strong-${i}-${groupIndex}`, {innerText:"Examples:"});
                 examples.appendChild(exStrong);
                 examples.appendChild(document.createTextNode(` ${group.examples.join("; ")}`));
                 groupDiv.appendChild(examples);
             }
 
             // WordNet POS info
-            const posInfo = document.createElement("div");
-            posInfo.className = "pos-info";
-            posInfo.id = `pos-info-div-${i}-${groupIndex}`;
-            posInfo.setAttribute("aria-label", `pos-info-div-${i}-${groupIndex}`);
+            const posInfo = createElementById("div", `pos-info-div-${i}-${groupIndex}`,{className: "pos-info"});
 
-            const posInfoStrong = document.createElement("strong");
-            posInfoStrong.textContent = "WordNet POS:";
-            posInfoStrong.id = `pos-info-strong-${i}-${groupIndex}`;
-            posInfoStrong.setAttribute("aria-label", `pos-info-strong-${i}-${groupIndex}`);
+            const posInfoStrong = createElementById("strong", `pos-info-strong-${i}-${groupIndex}`, {innerText:"WordNet POS:"});
             posInfo.appendChild(posInfoStrong);
             posInfo.appendChild(document.createTextNode(` ${group.wordnet_pos}`));
             groupDiv.appendChild(posInfo);
 
             // Synonyms list with inflected forms
-            const synonymsList = document.createElement("div");
-            synonymsList.className = "inflated-synonyms-list";
-            synonymsList.id = `synonyms-list-div-${i}-${groupIndex}`;
-            synonymsList.setAttribute("aria-label", `synonyms-list-div-${i}-${groupIndex}`);
+            const synonymsList = createElementById("div", `synonyms-list-div-${i}-${groupIndex}`,{className: "inflated-synonyms-list"});
 
-            const synonymsTitle = document.createElement("h4");
-            synonymsTitle.textContent = "Available Synonyms:";
-            synonymsTitle.id = `synonyms-title-${i}-${groupIndex}`;
-            synonymsTitle.setAttribute("aria-label", `synonyms-title-${i}-${groupIndex}`);
+            const synonymsTitle = createElementById("h4", `synonyms-title-${i}-${groupIndex}`, {innerText:"Available Synonyms:"});
             synonymsList.appendChild(synonymsTitle);
 
             group.synonyms.forEach((synonym, synonymIndex) => {
-                const synonymContainer = document.createElement("div");
-                synonymContainer.className = "synonym-option-container";
-                synonymContainer.id = `synonym-container-${i}-${groupIndex}-${synonymIndex}`;
-                synonymContainer.setAttribute("aria-label", `synonym-container-${i}-${groupIndex}-${synonymIndex}`);
+                const synonymContainer = createElementById("div", `synonym-container-${i}-${groupIndex}-${synonymIndex}`, {className: "synonym-option-container"});
 
-                const synonymButton = document.createElement("button");
-                synonymButton.className = "inflated-synonym-option";
+                const synonymButton = createElementById("button", `synonym-button-${i}-${groupIndex}-${synonymIndex}`, {className: "inflated-synonym-option"});
                 synonymButton.setAttribute("data-group", groupIndex);
                 synonymButton.setAttribute("data-synonym", synonymIndex);
-                synonymButton.id = `synonym-button-${i}-${groupIndex}-${synonymIndex}`;
-                synonymButton.setAttribute("aria-label", `synonym-button-${i}-${groupIndex}-${synonymIndex}`);
 
                 // Show inflected form prominently, base form as reference
                 if (synonym.matches_context && synonym.inflected_form !== synonym.base_form) {
-                    const inflectedSpan = document.createElement("span");
-                    inflectedSpan.className = "inflected-form";
-                    inflectedSpan.textContent = synonym.inflected_form;
-                    inflectedSpan.id = `inflected-span-${i}-${groupIndex}-${synonymIndex}`;
-                    inflectedSpan.setAttribute("aria-label", `inflected-span-${i}-${groupIndex}-${synonymIndex}`);
+                    const inflectedSpan = createElementById("span", `inflected-span-${i}-${groupIndex}-${synonymIndex}`,{className: "inflected-form", innerText: synonym.inflected_form});
                     synonymButton.appendChild(inflectedSpan);
 
-                    const baseSpan = document.createElement("span");
-                    baseSpan.className = "base-form";
-                    baseSpan.textContent = `(from: ${synonym.base_form})`;
-                    baseSpan.id = `base-span-${i}-${groupIndex}-${synonymIndex}`;
-                    baseSpan.setAttribute("aria-label", `base-span-${i}-${groupIndex}-${synonymIndex}`);
+                    const baseSpan = createElementById("span", `base-span-${i}-${groupIndex}-${synonymIndex}`, {className: "base-form", innerText:`(from: ${synonym.base_form})`});
                     synonymButton.appendChild(baseSpan);
 
-                    const contextSpan = document.createElement("span");
-                    contextSpan.className = "context-match";
-                    contextSpan.textContent = "✓ context-matched";
-                    contextSpan.id = `context-span-${i}-${groupIndex}-${synonymIndex}`;
-                    contextSpan.setAttribute("aria-label", `context-span-${i}-${groupIndex}-${synonymIndex}`);
+                    const contextSpan = createElementById("span", `context-span-${i}-${groupIndex}-${synonymIndex}`,{className: "context-match", innerText:"✓ context-matched"});
                     synonymButton.appendChild(contextSpan);
                 } else {
-                    const inflectedSpan = document.createElement("span");
-                    inflectedSpan.className = "inflected-form";
-                    inflectedSpan.textContent = synonym.inflected_form;
-                    inflectedSpan.id = `inflected-span-${i}-${groupIndex}-${synonymIndex}`;
-                    inflectedSpan.setAttribute("aria-label", `inflected-span-${i}-${groupIndex}-${synonymIndex}`);
+                    const inflectedSpan = createElementById("span", `inflected-span-${i}-${groupIndex}-${synonymIndex}`, {className: "inflected-form", innerText:synonym.inflected_form});
                     synonymButton.appendChild(inflectedSpan);
                 }
 
@@ -24226,55 +24153,30 @@ Current version indicated by LITEVER below.
 
         // Debug info (optional, can be hidden in production)
         if (result.debugInfo) {
-            const debugDiv = document.createElement("div");
-            debugDiv.className = "thesaurus-debug-info";
-            debugDiv.style.fontSize = "0.8em";
-            debugDiv.style.color = "#666";
-            debugDiv.id = `debug-div-${i}`;
-            debugDiv.setAttribute("aria-label", `debug-div-${i}`);
+           const debugDiv = createElementById("div", `debug-div-${i}`, {className: "thesaurus-debug-info", style: "font-size: 0.8em; color: #666;"});
 
-            const details = document.createElement("details");
-            details.id = `details-${i}`;
-            details.setAttribute("aria-label", `details-${i}`);
+            const details = createElementById("details", `details-${i}`);
 
-            const summary = document.createElement("summary");
-            summary.textContent = "Debug Information";
-            summary.id = `summary-${i}`;
-            summary.setAttribute("aria-label", `summary-${i}`);
+            const summary = createElementById("summary", `summary-${i}`, {innerText:"Debug Information"});
             details.appendChild(summary);
 
             // Original Indices
-            const origIndicesP = document.createElement("p");
-            origIndicesP.id = `orig-indices-p-${i}`;
-            origIndicesP.setAttribute("aria-label", `orig-indices-p-${i}`);
-            const origIndicesStrong = document.createElement("strong");
-            origIndicesStrong.textContent = "Original Indices:";
-            origIndicesStrong.id = `orig-indices-strong-${i}`;
-            origIndicesStrong.setAttribute("aria-label", `orig-indices-strong-${i}`);
+             const origIndicesP = createElementById("p", `orig-indices-p-${i}`);
+            const origIndicesStrong = createElementById("strong", `orig-indices-strong-${i}`, {innerText:"Original Indices:"});
             origIndicesP.appendChild(origIndicesStrong);
             origIndicesP.appendChild(document.createTextNode(` ${result.originalIndices.start}-${result.originalIndices.end}`));
             details.appendChild(origIndicesP);
 
             // SpaCy Token Indices
-            const spacyIndicesP = document.createElement("p");
-            spacyIndicesP.id = `spacy-indices-p-${i}`;
-            spacyIndicesP.setAttribute("aria-label", `spacy-indices-p-${i}`);
-            const spacyIndicesStrong = document.createElement("strong");
-            spacyIndicesStrong.textContent = "SpaCy Token Indices:";
-            spacyIndicesStrong.id = `spacy-indices-strong-${i}`;
-            spacyIndicesStrong.setAttribute("aria-label", `spacy-indices-strong-${i}`);
+            const spacyIndicesP = createElementById("p", `spacy-indices-p-${i}`);
+            const spacyIndicesStrong = createElementById("strong", `spacy-indices-strong-${i}`, {innerText:"SpaCy Token Indices:"});
             spacyIndicesP.appendChild(spacyIndicesStrong);
             spacyIndicesP.appendChild(document.createTextNode(` ${result.debugInfo.spacy_token_indices.start}-${result.debugInfo.spacy_token_indices.end}`));
             details.appendChild(spacyIndicesP);
 
             // Lemma
-            const lemmaP = document.createElement("p");
-            lemmaP.id = `lemma-p-${i}`;
-            lemmaP.setAttribute("aria-label", `lemma-p-${i}`);
-            const lemmaStrong = document.createElement("strong");
-            lemmaStrong.textContent = "Lemma:";
-            lemmaStrong.id = `lemma-strong-${i}`;
-            lemmaStrong.setAttribute("aria-label", `lemma-strong-${i}`);
+            const lemmaP =  createElementById("p", `lemma-p-${i}`);
+            const lemmaStrong = createElementById("strong",  `lemma-strong-${i}`, {innerText:"Lemma:"});
             lemmaP.appendChild(lemmaStrong);
             lemmaP.appendChild(document.createTextNode(` ${result.debugInfo.lemma}`));
             details.appendChild(lemmaP);
