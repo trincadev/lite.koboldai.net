@@ -23772,11 +23772,11 @@ Current version indicated by LITEVER below.
         div3.append(label, select)
         const textarea1 = createElementById("textarea", `thesaurus-custom-related-words-${n}nth`, {
             className:"form-control menuinput_inline", type:"text", name:`thesaurus-custom-related-words-${n}nth`,
-            placehoder:"Related words (required)", required:true
+            placeholder:"Related words (required)", required:true
         })
         const textarea2 = createElementById("textarea", `thesaurus-custom-related-definition-${n}nth`, {
             className:"form-control menuinput_inline", type:"text", name:`thesaurus-custom-related-definition-${n}nth`,
-            placehoder:"Definition (optional)"
+            placeholder:"Definition (optional)"
         })
         div2.append(div3, textarea1, textarea2)
         div1.append(div2)
@@ -24025,23 +24025,11 @@ Current version indicated by LITEVER below.
     }
 
     function createSynonymGroupFromResult(i, result) {
-        const containerNth = document.createElement("div")
-        containerNth.className = 'inflated-synonym-container border-yellow';
-        containerNth.id = `content-inflated-synonyms-${i}nth`;
-        containerNth.setAttribute("aria-label", `content-inflated-synonyms-${i}nth`);
-
-        // Header with original word and context
-        const header = document.createElement('div');
-        header.className = `inflated-synonym-header`;
-        header.id = `inflated-synonym-header-${i}nth`;
-        header.setAttribute("aria-label", `inflated-synonym-header-${i}nth`);
+        const containerNth = createElementById("div", `content-inflated-synonyms-${i}nth`, {className:'inflated-synonym-container border-yellow'})
+        const header = createElementById("div", `inflated-synonym-header-${i}nth`, {className:`inflated-synonym-header`})
+        const originalWordSpan = createElementById("span", `thesaurus-original-word-span-${i}nth`, {className:"thesaurus-original-word-span", innerText:`${result.originalWord}`})
 
         const headerTitle = document.createElement('h2');
-        const originalWordSpan = document.createElement("span")
-        originalWordSpan.innerText = `${result.originalWord}`;
-        originalWordSpan.id = `thesaurus-original-word-span-${i}nth`
-        originalWordSpan.className = "thesaurus-original-word-span"
-        originalWordSpan.setAttribute("aria-label", `thesaurus-original-word-span-${i}nth`);
         headerTitle.textContent = `Smart Synonyms for `;
         headerTitle.appendChild(originalWordSpan)
         header.appendChild(headerTitle);
