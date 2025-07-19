@@ -23713,33 +23713,29 @@ Current version indicated by LITEVER below.
             .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
             .join(''); // Join all words without spaces
     }
-    function createElementById(elementType, id, className = null, type = null, event = null, fn = null) {
-        const element = document.createElement(elementType)
-        element.id = id
-        element.title = id
-        element.name = id
-        element.setAttribute("aria-label", id)
-        if (className !== null) {
-            element.className = className
+
+    function createElementById(elementType, id, options = {}) {
+        const element = document.createElement(elementType);
+        element.id = id;
+        element.title = id;
+        element.setAttribute("aria-label", id);
+        if (options.className) {
+            element.className = options.className;
         }
-        if (type !== null) {
-            element.type = type
+        if (options.type) {
+            element.type = options.type;
         }
-        if (fn !== null && event !== null) {
-            element.addEventListener(event, fn)
+        if (options.innerText) {
+            element.innerText = options.innerText;
         }
-        return element
-    }
-    function createButtonById(id, className, fn, event = "click", defaultClassNames = "btn") {
-        className = `${defaultClassNames} ${className}`
-        return createElementById("button", id, className, "button", event, fn)
+        if (options.event && options.fn) {
+            element.addEventListener(options.event, options.fn);
+        }
+        return element;
     }
     function createSelectWithOptListById(id, className, optionsArray) {
-        const select = document.createElement("select")
-        select.id = id
+        const select = createElementById("select", id, {className})
         select.name = id
-        select.className = className
-        select.setAttribute("aria-label", id)
         optionsArray.forEach(text => {
             const option = document.createElement("option")
             option.id = `${id}-${text}`
@@ -23767,8 +23763,11 @@ Current version indicated by LITEVER below.
         const div1 = document.createElement("div")
         div1.style.display = "flex"
 
-        const btnRemoveCustomGroup = createButtonById(`thesaurus-custom-related-btn-del-${n}nth`, "thesaurus-custom-related-btn-operation background-red", removeLastThesaurusCustomFormGroupElementWrapper)
-        btnRemoveCustomGroup.innerText = "X️"
+        const btnRemoveCustomGroup = createElementById("button", `thesaurus-custom-related-btn-del-${n}nth`,
+            {
+                className: "thesaurus-custom-related-btn-operation background-red",
+                type: "button", event:"click", fn:removeLastThesaurusCustomFormGroupElementWrapper, innerText:"X️"
+            })
         div1.append(btnRemoveCustomGroup)
 
         const div2 = document.createElement("div")
@@ -23779,29 +23778,6 @@ Current version indicated by LITEVER below.
         label.className = "thesaurus-custom-related-type-label"
         label.textContent = "Relationship:"
         const select = createSelectWithOptListById(`thesaurus-custom-related-type-${n}nth`, "form-control", ["synonym", "antonym", "homonym", "homophone", "homograph"])
-        /*
-        const select = document.createElement("select")
-        select.id = `thesaurus-custom-related-type-${n}nth`
-        select.name = `thesaurus-custom-related-type-${n}nth`
-        select.className = "form-control"
-        select.setAttribute("aria-label", `thesaurus-custom-related-type-${n}nth`)
-        const option1 = document.createElement("option")
-        option1.value = "synonym"
-        option1.textContent = "Synonym"
-        const option2 = document.createElement("option")
-        option2.value = "antonym"
-        option2.textContent = "Antonym"
-        const option3 = document.createElement("option")
-        option3.value = "homonym"
-        option3.textContent = "Homonym"
-        const option4 = document.createElement("option")
-        option4.value = "homophone"
-        option4.textContent = "Homophone"
-        const option5 = document.createElement("option")
-        option5.value = "homograph"
-        option5.textContent = "Homograph"
-        select.append(option1, option2, option3, option4, option5)
-        */
         div3.append(label, select)
         const textarea1 = document.createElement("textarea")
         textarea1.id = `thesaurus-custom-related-words-${n}nth`
