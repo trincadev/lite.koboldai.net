@@ -23719,15 +23719,13 @@ Current version indicated by LITEVER below.
         element.id = id;
         element.title = id;
         element.setAttribute("aria-label", id);
-        if (options.className) {
-            element.className = options.className;
-        }
-        if (options.type) {
-            element.type = options.type;
-        }
-        if (options.innerText) {
-            element.innerText = options.innerText;
-        }
+        if (options.className) element.className = options.className;
+        if (options.type) element.type = options.type;
+        if (options.innerText) element.innerText = options.innerText;
+        if (options.name) element.name = options.name;
+        if (options.placeholder) element.placeholder = options.placeholder;
+        if (options.required !== undefined) element.required = options.required;
+        if (options.value !== undefined) element.value = options.value;
         if (options.event && options.fn) {
             element.addEventListener(options.event, options.fn);
         }
@@ -23744,15 +23742,14 @@ Current version indicated by LITEVER below.
         thesaurusCustomStatus.countPlus -= 1
     }
     function addNewThesaurusCustomFormGroupElement(n) {
-        const thesaurusCustomFormGropus = document.getElementById("thesaurus-custom-form-groups")
+        const thesaurusCustomFormGroups = document.getElementById("thesaurus-custom-form-groups")
         const customFormNth = createElementById("div", `thesaurus-custom-form-group-content-${n}nth`, {className:"thesaurus-custom-form-group-content"})
         const div1 = createElementById("div", `parent-thesaurus-custom-related-btn-del-${n}nth`, {className: "display-flex"})
 
-        const btnRemoveCustomGroup = createElementById("button", `thesaurus-custom-related-btn-del-${n}nth`,
-            {
-                className: "thesaurus-custom-related-btn-operation background-red",
-                type: "button", event:"click", fn:removeLastThesaurusCustomFormGroupElementWrapper, innerText:"X️"
-            })
+        const btnRemoveCustomGroup = createElementById("button", `thesaurus-custom-related-btn-del-${n}nth`, {
+            className: "thesaurus-custom-related-btn-operation background-red",
+            type: "button", event:"click", fn:removeLastThesaurusCustomFormGroupElementWrapper, innerText:"X️"
+        })
         div1.append(btnRemoveCustomGroup)
 
         const div2 = document.createElement("div")
@@ -23760,8 +23757,7 @@ Current version indicated by LITEVER below.
         const label = createElementById("label", `thesaurus-label-select-${n}nth`, {className:"thesaurus-custom-related-type-label", innerText: "Relationship:"})
         label.htmlFor = `thesaurus-custom-related-type-${n}nth`
 
-        const select = createElementById("select", `thesaurus-custom-related-type-${n}nth`, {className: "form-control"})
-        select.name = `thesaurus-custom-related-type-${n}nth`
+        const select = createElementById("select", `thesaurus-custom-related-type-${n}nth`, {className: "form-control", name:`thesaurus-custom-related-type-${n}nth`})
         const optionsArray = ["synonym", "antonym", "homonym", "homophone", "homograph"];
         optionsArray.forEach(text => {
             const option = document.createElement("option")
@@ -23774,25 +23770,18 @@ Current version indicated by LITEVER below.
         })
 
         div3.append(label, select)
-        const textarea1 = document.createElement("textarea")
-        textarea1.id = `thesaurus-custom-related-words-${n}nth`
-        textarea1.type = "text"
-        textarea1.name = `thesaurus-custom-related-words-${n}nth`
-        textarea1.placeholder = "Related words (required)"
-        textarea1.required = true
-        textarea1.className = "form-control menuinput_inline"
-        textarea1.setAttribute("aria-label", `thesaurus-custom-related-words-${n}nth`)
-        const textarea2 = document.createElement("textarea")
-        textarea2.id = `thesaurus-custom-related-definition-${n}nth`
-        textarea2.type = "text"
-        textarea2.setAttribute("aria-label", `thesaurus-custom-related-definition-${n}nth`)
-        textarea2.className = "form-control menuinput_inline"
-        textarea2.name = `thesaurus-custom-related-definition-${n}nth`
-        textarea2.placeholder = "Definition (optional)"
+        const textarea1 = createElementById("textarea", `thesaurus-custom-related-words-${n}nth`, {
+            className:"form-control menuinput_inline", type:"text", name:`thesaurus-custom-related-words-${n}nth`,
+            placehoder:"Related words (required)", required:true
+        })
+        const textarea2 = createElementById("textarea", `thesaurus-custom-related-definition-${n}nth`, {
+            className:"form-control menuinput_inline", type:"text", name:`thesaurus-custom-related-definition-${n}nth`,
+            placehoder:"Definition (optional)"
+        })
         div2.append(div3, textarea1, textarea2)
         div1.append(div2)
         customFormNth.append(div1)
-        thesaurusCustomFormGropus.append(customFormNth)
+        thesaurusCustomFormGroups.append(customFormNth)
     }
     function openThesaurusCustomForm() {
         showElementById("thesaurus-custom-form-container")
