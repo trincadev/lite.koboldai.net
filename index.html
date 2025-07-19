@@ -24024,6 +24024,20 @@ Current version indicated by LITEVER below.
         };
     }
 
+    function createParagraphWithStrongByObjArray(i, parentDiv, objectsArray, elementTypes = ["p", "strong"]) {
+        objectsArray.forEach(({k, innerText, textNode}) => {
+            if (textNode.trim() !== "") {
+                const e0 = elementTypes[0]
+                const e1 = elementTypes[1]
+                const paragraphElementByKind = createElementById(e0, `${k}-${e0}-${i}nth`);
+                const posStrong = createElementById(e1, `${k}-${e1}-${i}nth`, {innerText});
+                paragraphElementByKind.appendChild(posStrong);
+                paragraphElementByKind.appendChild(document.createTextNode(textNode));
+                parentDiv.appendChild(paragraphElementByKind);
+            }
+        })
+    }
+
     function createSynonymGroupFromResult(i, result) {
         const containerNth = createElementById("div", `content-inflated-synonyms-${i}nth`, {className:"inflated-synonym-container border-yellow"})
         const header = createElementById("div", `inflated-synonym-header-${i}nth`, {className: "inflated-synonym-header"})
@@ -24034,39 +24048,20 @@ Current version indicated by LITEVER below.
         headerTitle.appendChild(originalWordSpan)
         header.appendChild(headerTitle);
 
-        const contextInfoDiv = createElementById("div", `context-info-div-${i}nth`, {className: "context-info"});
-
-        // Part of Speech paragraph
-        const posP = createElementById("p", `pos-p-${i}nth`);
-        const posStrong = createElementById("strong", `pos-strong-${i}nth`, {innerText: "Part of Speech:"});
-        posP.appendChild(posStrong);
-        posP.appendChild(document.createTextNode(` ${result.contextInfo.pos} (${result.contextInfo.grammatical_form})`));
-        contextInfoDiv.appendChild(posP);
-
-        // Context paragraph
-        const contextP = createElementById("p", `context-p-${i}nth`);
-        const contextStrong = createElementById("strong", `context-strong-${i}nth`, {innerText: "Context:"});
-        contextP.appendChild(contextStrong);
-        contextP.appendChild(document.createTextNode(` ${result.contextInfo.sentence}`));
-        contextInfoDiv.appendChild(contextP);
-
-        // Dependency paragraph
-        const depP = createElementById("p", `dep-p-${i}nth`);
-        const depStrong = createElementById("strong", `dep-strong-${i}nth`, {innerText: "Dependency:"});
-        depP.appendChild(depStrong);
-        depP.appendChild(document.createTextNode(` ${result.contextInfo.dependency}`));
-        contextInfoDiv.appendChild(depP);
-
+        const contextInfoDiv = createElementById("div", `context-info-div-${i}nth`, {className: "context-info"})
+        createParagraphWithStrongByObjArray(i, contextInfoDiv, [
+            {k:"pos", innerText:"Part of Speech:", textNode:` ${result.contextInfo.pos} (${result.contextInfo.grammatical_form})`},
+            {k:"context", innerText:"Context:", textNode:` ${result.contextInfo.sentence}`},
+            {k:"dep", innerText:"Dependency:", textNode:` ${result.contextInfo.dependency}`}
+        ]);
         header.appendChild(contextInfoDiv);
         containerNth.appendChild(header);
 
         // Check if no synonyms found
         if (!result.synonymGroups || result.synonymGroups.length === 0) {
             const noSynonyms = createElementById("div", `no-synonyms-${i}nth`, {className: "no-synonyms-message"});
-
             const noSynonymsP = createElementById("p", `no-synonyms-p-${i}nth`, {innerText: result.message || "No synonyms found for this word."});
             noSynonyms.appendChild(noSynonymsP);
-
             containerNth.appendChild(noSynonyms);
             return containerNth;
         }
@@ -24076,42 +24071,19 @@ Current version indicated by LITEVER below.
            const groupDiv = createElementById("div", `inflated-synonym-group-${i}-${groupIndex}`,{className: "inflated-synonym-group"});
 
             insertSeparator(groupDiv);
-
-            // Definition
-            const definition = createElementById("div", `definition-div-${i}-${groupIndex}`, {className: "definition"});
-
-            const defStrong = createElementById("strong", `definition-strong-${i}-${groupIndex}`, { innerText:"Definition:"});
-            definition.appendChild(defStrong);
-            definition.appendChild(document.createTextNode(` ${group.definition}`));
-            groupDiv.appendChild(definition);
-
-            // Examples (if available)
-            if (group.examples && group.examples.length > 0) {
-                const examples =  createElementById("div", `examples-div-${i}-${groupIndex}`, {className: "examples"});
-
-            const exStrong =  createElementById("strong", `examples-strong-${i}-${groupIndex}`, {innerText:"Examples:"});
-                examples.appendChild(exStrong);
-                examples.appendChild(document.createTextNode(` ${group.examples.join("; ")}`));
-                groupDiv.appendChild(examples);
-            }
-
-            // WordNet POS info
-            const posInfo = createElementById("div", `pos-info-div-${i}-${groupIndex}`,{className: "pos-info"});
-
-            const posInfoStrong = createElementById("strong", `pos-info-strong-${i}-${groupIndex}`, {innerText:"WordNet POS:"});
-            posInfo.appendChild(posInfoStrong);
-            posInfo.appendChild(document.createTextNode(` ${group.wordnet_pos}`));
-            groupDiv.appendChild(posInfo);
+            createParagraphWithStrongByObjArray(i, groupDiv, [
+                {k:"definition", innerText:"Definition:", textNode: ` ${group.definition}`},
+                {k:"examples", innerText:"Examples:", textNode: group.examples && group.examples.length > 0 ? ` ${group.examples.join('; ')}` : ""},
+                {k:"pos-info", innerText:"WordNet POS:", textNode: ` ${group.wordnet_pos}`}
+            ], ["div", "strong"])
 
             // Synonyms list with inflected forms
             const synonymsList = createElementById("div", `synonyms-list-div-${i}-${groupIndex}`,{className: "inflated-synonyms-list"});
-
             const synonymsTitle = createElementById("h4", `synonyms-title-${i}-${groupIndex}`, {innerText:"Available Synonyms:"});
             synonymsList.appendChild(synonymsTitle);
 
             group.synonyms.forEach((synonym, synonymIndex) => {
                 const synonymContainer = createElementById("div", `synonym-container-${i}-${groupIndex}-${synonymIndex}`, {className: "synonym-option-container"});
-
                 const synonymButton = createElementById("button", `synonym-button-${i}-${groupIndex}-${synonymIndex}`, {className: "inflated-synonym-option"});
                 synonymButton.setAttribute("data-group", groupIndex);
                 synonymButton.setAttribute("data-synonym", synonymIndex);
@@ -24131,7 +24103,7 @@ Current version indicated by LITEVER below.
                     synonymButton.appendChild(inflectedSpan);
                 }
 
-                // Apply synonym when clicked, but only if #allowediting checked
+                // Apply the synonym when clicked, but only if #allowediting checked
                 const iseditable = document.getElementById("allowediting")
                 if (!iseditable.checked) {
                     synonymButton.disabled = true
@@ -24154,32 +24126,14 @@ Current version indicated by LITEVER below.
         // Debug info (optional, can be hidden in production)
         if (result.debugInfo) {
            const debugDiv = createElementById("div", `debug-div-${i}`, {className: "thesaurus-debug-info", style: "font-size: 0.8em; color: #666;"});
-
             const details = createElementById("details", `details-${i}`);
-
             const summary = createElementById("summary", `summary-${i}`, {innerText:"Debug Information"});
             details.appendChild(summary);
-
-            // Original Indices
-             const origIndicesP = createElementById("p", `orig-indices-p-${i}`);
-            const origIndicesStrong = createElementById("strong", `orig-indices-strong-${i}`, {innerText:"Original Indices:"});
-            origIndicesP.appendChild(origIndicesStrong);
-            origIndicesP.appendChild(document.createTextNode(` ${result.originalIndices.start}-${result.originalIndices.end}`));
-            details.appendChild(origIndicesP);
-
-            // SpaCy Token Indices
-            const spacyIndicesP = createElementById("p", `spacy-indices-p-${i}`);
-            const spacyIndicesStrong = createElementById("strong", `spacy-indices-strong-${i}`, {innerText:"SpaCy Token Indices:"});
-            spacyIndicesP.appendChild(spacyIndicesStrong);
-            spacyIndicesP.appendChild(document.createTextNode(` ${result.debugInfo.spacy_token_indices.start}-${result.debugInfo.spacy_token_indices.end}`));
-            details.appendChild(spacyIndicesP);
-
-            // Lemma
-            const lemmaP =  createElementById("p", `lemma-p-${i}`);
-            const lemmaStrong = createElementById("strong",  `lemma-strong-${i}`, {innerText:"Lemma:"});
-            lemmaP.appendChild(lemmaStrong);
-            lemmaP.appendChild(document.createTextNode(` ${result.debugInfo.lemma}`));
-            details.appendChild(lemmaP);
+            createParagraphWithStrongByObjArray(i, details, [
+                {k:"orig-indices", innerText:"Original Indices:", textNode:` ${result.originalIndices.start}-${result.originalIndices.end}`},
+                {k:"spacy-indices", innerText:"SpaCy Token Indices:", textNode:` ${result.debugInfo.spacy_token_indices.start}-${result.debugInfo.spacy_token_indices.end}`},
+                {k:"lemma", innerText:"Lemma:", textNode:` ${result.debugInfo.lemma}`}
+            ]);
 
             debugDiv.appendChild(details);
             containerNth.appendChild(debugDiv);
