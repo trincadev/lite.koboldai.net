@@ -24669,15 +24669,11 @@ Current version indicated by LITEVER below.
         // Main logic
         let matchRanges = search_text_for_strings(queryWords);
 
-        const topper = document.createElement("div");
-        topper.style.border = "1px solid #646464";
-        topper.innerText = `${matchRanges.length} results`;
-        topper.id = "match-ranges-topper";
-        topper.setAttribute("aria-label", "match-ranges-topper");
+        const topper = createElementById("div", "match-ranges-topper", {className:"border-gray", innerText:`${matchRanges.length} results`})
         resultsContainer.appendChild(topper);
         matchRanges.forEach(({ range }, i) => {
-            let nearbytext = extract_surrounding_text(range, 8);
-            const btn = createResultButton(nearbytext, range, idParent, i);
+            let nearbyText = extract_surrounding_text(range, 8);
+            const btn = createResultButton(nearbyText, range, idParent, i);
             resultsContainer.appendChild(btn);
         });
     }
@@ -24757,8 +24753,8 @@ Current version indicated by LITEVER below.
             border: 1px solid #646464;
         }
         .default-scroll-transparent {
-            display: "inline";
-            background: "transparent";
+            display: inline;
+            background: transparent;
         }
         #id-rightpanel-thesaurus, #thesaurus-custom-form-container {
             position: fixed;
