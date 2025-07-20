@@ -24347,32 +24347,12 @@ Current version indicated by LITEVER below.
         return ngramCounts;
     }
 
-    function createContentSpan(idContent, cssClass, textContent) {
-        const contentResults = document.createElement("span");
-        contentResults.id = idContent;
-        contentResults.setAttribute("aria-label", idContent)
-        contentResults.classList.add(cssClass);
-        contentResults.textContent = textContent;
-        return contentResults;
-    }
-
-    function createBtnParent(idBtnParent, btnStyle = "1px solid #646464") {
-        const btn = document.createElement("div");
-        btn.style.border = btnStyle
-        btn.id = idBtnParent
-        btn.setAttribute("aria-label", idBtnParent)
-        return btn
-    }
-
-    function createBtnWordsearchResults(idBtnParent, idLink, objectContentsArray, btnStyle = "1px solid #646464") {
-        const btn = createBtnParent(idBtnParent, btnStyle)
-        const link = document.createElement("a");
-        link.href = "#";
-        link.id = idLink
-        link.setAttribute("aria-label", idLink)
+    function createBtnWordsearchResults(idBtnParent, idLink, objectContentsArray, classNameContainer = "border-gray") {
+        const btn = createElementById("div", idBtnParent, {className:classNameContainer})
+        const link = createElementById("a", idLink, {href:"#"})
         objectContentsArray.forEach(objectContent => {
             const {idContent, cssClass, textContent} = objectContent;
-            const contentSpan = createContentSpan(idContent, cssClass, textContent)
+            const contentSpan = createElementById("span", idContent, {className: cssClass, innerText:textContent})
             link.appendChild(contentSpan);
         })
         btn.appendChild(link);
@@ -24779,6 +24759,9 @@ Current version indicated by LITEVER below.
         }
         .background-green {
             background-color: green;
+        }
+        .border-gray {
+            border: 1px solid #646464;
         }
         #id-rightpanel-thesaurus, #thesaurus-custom-form-container {
             position: fixed;
