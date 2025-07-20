@@ -25182,8 +25182,8 @@ Current version indicated by LITEVER below.
                         <!-- Thesaurus right panels results -->
                         <section id="id-rightpanel-thesaurus" aria-label="id-rightpanel-thesaurus" class="hidden">
                             <div id="id-rightpanel-thesaurus-content-parent">
-                                <div id="id-rightpanel-thesaurus-close-parent" class="display-flex">
-                                    <button id="id-rightpanel-thesaurus-close" aria-label="id-rightpanel-thesaurus-close" type="button" class="btn id-rightpanel-thesaurus-close background-red" onclick="closeThesaurus()">X</button>
+                                <header id="id-rightpanel-thesaurus-close-parent" class="display-flex">
+                                    <button id="id-rightpanel-thesaurus-close" aria-label="id-rightpanel-thesaurus-close" type="button" class="btn id-rightpanel-thesaurus-close background-red" onclick="closeThesaurus()" data-testid="thesaurus-close-button">X</button>
                                     <input
                                             title="synonym mod Input"
                                             class="form-control menuinput_inline"
@@ -25191,6 +25191,7 @@ Current version indicated by LITEVER below.
                                             placeholder="synonym(s) edit/substitution"
                                             value=""
                                             id="thesaurus-synonym-mod-input"
+                                            data-testid="thesaurus-synonym-mod-input"
                                     >
                                     <button
                                             title="confirm synonym mod"
@@ -25199,9 +25200,10 @@ Current version indicated by LITEVER below.
                                             onclick="confirmSynonymButton()"
                                             id="thesaurus-synonym-mod-confirm-button"
                                             aria-label="thesaurus-synonym-mod-confirm-button"
+                                            data-testid="thesaurus-synonym-mod-confirm-button"
                                     >💾</button>
                                     <button type="button" id="thesaurus-custom-button-internal0" aria-label="thesaurus-custom-button-internal0" title="Add Custom Thesaurus Entry" class="btn btn-primary" onclick="openThesaurusCustomForm()">+Thesaurus</button>
-                                </div>
+                                </header>
                                 <span id="id-rightpanel-thesaurus-waiting" aria-label="d-dialog-thesaurus-waiting" class="hidden">waiting...</span>
                                 <span id="id-rightpanel-thesaurus-error" aria-label="d-dialog-thesaurus-error" class="hidden">Error!</span>
                                 <div id="id-rightpanel-thesaurus-content">
