@@ -25213,19 +25213,19 @@ Current version indicated by LITEVER below.
                         </section>
                         <!-- End Thesaurus right panels results -->
                         <!-- Custom Thesaurus Form -->
-                        <div id="thesaurus-custom-form-container" aria-label="thesaurus-custom-form-container" class="hidden">
+                        <div id="thesaurus-custom-form-container" aria-label="thesaurus-custom-form-container" class="hidden" data-testid="thesaurus-custom-form-container">
                             <div id="thesaurus-custom-form-content-parent" aria-label="thesaurus-custom-form-content-parent">
                                 <div id="id-thesaurus-custom-form" aria-label="id-thesaurus-custom-form">
                                     <div id="id-thesaurus-custom-form-border">
                                         <h3>Add Custom Thesaurus Entry</h3>
-                                        <input type="text" id="thesaurus-custom-word" name="thesaurus-custom-word" aria-label="thesaurus-custom-word" placeholder="Word (required)" required class="form-control menuinput_inline thesaurus-custom-form-input">
+                                        <input type="text" id="thesaurus-custom-word" name="thesaurus-custom-word" aria-label="thesaurus-custom-word" placeholder="Word (required)" required class="form-control menuinput_inline thesaurus-custom-form-input" data-testid="thesaurus-custom-word">
                                         <div id="thesaurus-custom-form-group-content-0nth" aria-label="thesaurus-custom-form-group-content-0nth" class="thesaurus-custom-form-group-content">
                                             <div class="display-flex">
-                                                <button type="button" id="thesaurus-custom-related-btn-add-0nth" aria-label="thesaurus-custom-related-btn-add-0nth" class="btn btn-primary thesaurus-custom-related-btn-operation" onclick="addNewThesaurusCustomFormGroupElementWrapper()">+</button>
+                                                <button type="button" id="thesaurus-custom-related-btn-add-0nth" aria-label="thesaurus-custom-related-btn-add-0nth" class="btn btn-primary thesaurus-custom-related-btn-operation" onclick="addNewThesaurusCustomFormGroupElementWrapper()" data-testid="thesaurus-custom-related-btn-add-0nth">+</button>
                                                 <div>
                                                     <div class="display-flex">
                                                         <label for="thesaurus-custom-related-type-0nth" class="thesaurus-custom-related-type-label">Relationship:</label>
-                                                        <select id="thesaurus-custom-related-type-0nth" name="thesaurus-custom-related-type-0nth" aria-label="thesaurus-custom-related-type-0nth" class="form-control">
+                                                        <select id="thesaurus-custom-related-type-0nth" name="thesaurus-custom-related-type-0nth" aria-label="thesaurus-custom-related-type-0nth" class="form-control" data-testid="thesaurus-custom-related-type-0nth">
                                                             <option value="synonym">Synonym</option>
                                                             <option value="antonym">Antonym</option>
                                                             <option value="homonym">Homonym</option>
@@ -25233,8 +25233,8 @@ Current version indicated by LITEVER below.
                                                             <option value="homograph">Homograph</option>
                                                         </select>
                                                     </div>
-                                                    <textarea type="text" id="thesaurus-custom-related-words-0nth" name="thesaurus-custom-related-words" aria-label="thesaurus-custom-related-words-0nth" placeholder="Related words (required)" required class="form-control menuinput_inline"></textarea>
-                                                    <textarea type="text" id="thesaurus-custom-related-definition-0nth" name="thesaurus-custom-related-definition" aria-label="thesaurus-custom-related-definition-0nth" placeholder="Definition (optional)" class="form-control menuinput_inline"></textarea>
+                                                    <textarea type="text" id="thesaurus-custom-related-words-0nth" name="thesaurus-custom-related-words" aria-label="thesaurus-custom-related-words-0nth" placeholder="Related words (required)" required class="form-control menuinput_inline" data-testid="thesaurus-custom-related-words-0nth"></textarea>
+                                                    <textarea type="text" id="thesaurus-custom-related-definition-0nth" name="thesaurus-custom-related-definition" aria-label="thesaurus-custom-related-definition-0nth" placeholder="Definition (optional)" class="form-control menuinput_inline" data-testid="thesaurus-custom-related-definition-0nth"></textarea>
                                                 </div>
                                             </div>
                                         </div>
@@ -25246,8 +25246,8 @@ Current version indicated by LITEVER below.
                                         </div>
                                     </div>
                                     <div style="margin-top: 6px;">
-                                        <button type="button" id="thesaurus-custom-submit" aria-label="thesaurus-custom-submit" class="btn btn-primary thesaurus-custom-form-btn" onclick="submitThesaurusCustom()">Submit</button>
-                                        <button type="button" id="thesaurus-custom-cancel" aria-label="thesaurus-custom-cancel" class="btn background-red" onclick="closeThesaurusCustomForm()">Cancel</button>
+                                        <button type="button" id="thesaurus-custom-submit" aria-label="thesaurus-custom-submit" class="btn btn-primary thesaurus-custom-form-btn" onclick="submitThesaurusCustom()" data-testid="thesaurus-custom-submit">Submit</button>
+                                        <button type="button" id="thesaurus-custom-cancel" aria-label="thesaurus-custom-cancel" class="btn background-red" onclick="closeThesaurusCustomForm()" data-testid="thesaurus-custom-cancel">Cancel</button>
                                     </div>
                                 </div>
                             </div>
