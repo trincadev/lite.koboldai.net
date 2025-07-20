@@ -24029,8 +24029,7 @@ Current version indicated by LITEVER below.
                 const e1 = elementTypes[1]
                 const paragraphElementByKind = createElementById(e0, `${k}-${e0}-${i}nth`);
                 const posStrong = createElementById(e1, `${k}-${e1}-${i}nth`, {innerText});
-                paragraphElementByKind.appendChild(posStrong);
-                paragraphElementByKind.appendChild(document.createTextNode(textNode));
+                paragraphElementByKind.append(posStrong, document.createTextNode(textNode));
                 parentDiv.appendChild(paragraphElementByKind);
             }
         })
@@ -24044,7 +24043,6 @@ Current version indicated by LITEVER below.
         const headerTitle = document.createElement("h2");
         headerTitle.textContent = `Smart Synonyms for `;
         headerTitle.appendChild(originalWordSpan)
-        header.appendChild(headerTitle);
 
         const contextInfoDiv = createElementById("div", `context-info-div-${i}nth`, {className: "context-info"})
         createParagraphWithStrongByObjArray(i, contextInfoDiv, [
@@ -24052,7 +24050,7 @@ Current version indicated by LITEVER below.
             {k:"context", innerText:"Context:", textNode:` ${result.contextInfo.sentence}`},
             {k:"dep", innerText:"Dependency:", textNode:` ${result.contextInfo.dependency}`}
         ]);
-        header.appendChild(contextInfoDiv);
+        header.append(headerTitle, contextInfoDiv);
         containerNth.appendChild(header);
 
         // Check if no synonyms found
@@ -24089,13 +24087,9 @@ Current version indicated by LITEVER below.
                 // Show inflected form prominently, base form as reference
                 if (synonym.matches_context && synonym.inflected_form !== synonym.base_form) {
                     const inflectedSpan = createElementById("span", `inflected-span-${i}-${groupIndex}-${synonymIndex}`,{className: "inflected-form", innerText: synonym.inflected_form});
-                    synonymButton.appendChild(inflectedSpan);
-
                     const baseSpan = createElementById("span", `base-span-${i}-${groupIndex}-${synonymIndex}`, {className: "base-form", innerText:`(from: ${synonym.base_form})`});
-                    synonymButton.appendChild(baseSpan);
-
                     const contextSpan = createElementById("span", `context-span-${i}-${groupIndex}-${synonymIndex}`,{className: "context-match", innerText:"✓ context-matched"});
-                    synonymButton.appendChild(contextSpan);
+                    synonymButton.append(inflectedSpan, baseSpan, contextSpan);
                 } else {
                     const inflectedSpan = createElementById("span", `inflected-span-${i}-${groupIndex}-${synonymIndex}`, {className: "inflected-form", innerText:synonym.inflected_form});
                     synonymButton.appendChild(inflectedSpan);
