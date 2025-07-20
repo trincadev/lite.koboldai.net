@@ -24559,11 +24559,7 @@ Current version indicated by LITEVER below.
         }
 
         function handleDefaultScroll(range) {
-            const span = document.createElement("span");
-            span.style.display = "inline";
-            span.style.background = "transparent";
-            span.id = "temp-scroll-target";
-            span.setAttribute("aria-label", "temp-scroll-target");
+            const span = createElementById("span", "temp-scroll-target", {className:"default-scroll-transparent"})
             const tempRange = range.cloneRange();
             tempRange.collapse(true);
             tempRange.insertNode(span);
@@ -24759,6 +24755,10 @@ Current version indicated by LITEVER below.
         }
         .border-gray {
             border: 1px solid #646464;
+        }
+        .default-scroll-transparent {
+            display: "inline";
+            background: "transparent";
         }
         #id-rightpanel-thesaurus, #thesaurus-custom-form-container {
             position: fixed;
