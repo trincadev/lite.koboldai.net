@@ -23760,7 +23760,7 @@ Current version indicated by LITEVER below.
 
         const select = createElementById("select", `thesaurus-custom-related-type-${n}nth`, {className: "form-control", name:`thesaurus-custom-related-type-${n}nth`})
         const optionsArray = ["synonym", "antonym", "homonym", "homophone", "homograph"];
-        optionsArray.forEach(text => {
+        optionsArray.forEach(text => { // right now createElementById() doens't work with these option elements
             const option = document.createElement("option")
             option.id = `thesaurus-custom-related-type-${n}nth-${text}`
             option.className = "text-transform-capitalize"
