@@ -23760,13 +23760,10 @@ Current version indicated by LITEVER below.
 
         const select = createElementById("select", `thesaurus-custom-related-type-${n}nth`, {className: "form-control", name:`thesaurus-custom-related-type-${n}nth`})
         const optionsArray = ["synonym", "antonym", "homonym", "homophone", "homograph"];
-        optionsArray.forEach(text => { // right now createElementById() doens't work with these option elements
-            const option = document.createElement("option")
-            option.id = `thesaurus-custom-related-type-${n}nth-${text}`
-            option.className = "text-transform-capitalize"
-            option.innerText = toPascalCase(text)
-            // const option = createElementById("option", `thesaurus-custom-related-type-${n}nth-${text}`, {className:"text-transform-capitalize", innerText: toPascalCase(text)})
-            option.value = text
+        optionsArray.forEach(text => {
+            const option = createElementById("option", `thesaurus-custom-related-type-${n}nth-${text}`, {
+                className:"text-transform-capitalize", innerText: toPascalCase(text), value:text
+            })
             select.append(option)
         })
 
