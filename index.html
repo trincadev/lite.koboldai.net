@@ -24142,15 +24142,8 @@ Current version indicated by LITEVER below.
     }
 
     function createInflatedSynonymUI(synonymData) {
-        const container = document.createElement('div');
-        container.className = 'inflated-synonym-container';
-        container.id = 'content-inflated-synonyms-container';
-        container.setAttribute("aria-label", 'content-inflated-synonyms-container');
-
-        const h1phrase = document.createElement("h1")
-        h1phrase.innerText = `Original phrase: ${synonymData.originalPhrase}`;
-        h1phrase.id = `id-content-inflated-synonyms-container-h1-original-phrase`
-        h1phrase.setAttribute("aria-label", `id-content-inflated-synonyms-container-h1-original-phrase`)
+        const container = createElementById("div", "content-inflated-synonyms-container", {className:"inflated-synonym-container"})
+        const h1phrase = createElementById("h1", "id-content-inflated-synonyms-container-h1-original-phrase", {innerText:`Original phrase: ${synonymData.originalPhrase}`})
         globalSelection.originalPhrase = `${synonymData.originalPhrase}`
         container.append(h1phrase)
         const results = synonymData.results
