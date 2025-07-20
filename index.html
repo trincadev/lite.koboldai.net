@@ -24413,10 +24413,7 @@ Current version indicated by LITEVER below.
             resultsContainer.appendChild(btn);
         }
         // Add count feedback
-        const countElem = document.createElement("span");
-        countElem.id = "wordsearch_candidates_count";
-        countElem.setAttribute("aria-label", "wordsearch_candidates_count");
-        countElem.textContent = `${candidateItems.length} result(s) found`;
+        const countElem = createElementById("span", "wordsearch_candidates_count", {innerText:`${candidateItems.length} result(s) found`});
         resultsContainer.prepend(countElem);
     }
 
