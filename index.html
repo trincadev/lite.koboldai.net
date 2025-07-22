@@ -23714,20 +23714,46 @@ Current version indicated by LITEVER below.
             .join(''); // Join all words without spaces
     }
 
+    function validateElementType(elementType) {
+        const DANGEROUS_ELEMENTS = [
+            'script', 'object', 'embed', 'applet', 'iframe', 'frame', 'frameset', 'noframes',
+            'form', 'meta', 'title', 'head', 'html', 'body', 'doctype', 'style', 'link', 'base',
+            'font', 'center', 'marquee', 'blink', 'spacer'
+        ];
+
+        if (DANGEROUS_ELEMENTS.includes(elementType.toLowerCase())) {
+            throw new Error(`Element type "${elementType}" is not allowed for security reasons`);
+        }
+    }
+
+    function sanitizeAndSetId(element, id) {
+        if (!id || typeof id !== 'string' || !element) {
+            console.error("sanitizeAndSetId::id:", id, ", element:", typeof element, element, "#")
+            throw Error(`id must be of type string, not '${typeof id}'!`)
+        }
+        const sanitizedId = id.replace(/[^a-zA-Z0-9_-]/g, '');
+        element.id = sanitizedId;
+        element.title = sanitizedId;
+        element.setAttribute("aria-label", sanitizedId);
+    }
+
+    function sanitizeString(value) {
+        return typeof value === 'string' ? value.replace(/[<>]/g, '') : '';
+    }
+
     function createElementById(elementType, id, options = {}) {
+        validateElementType(elementType)
         const element = document.createElement(elementType);
-        element.id = id;
-        element.title = id;
-        element.setAttribute("aria-label", id);
-        if (options.className) element.className = options.className;
-        if (options.type) element.type = options.type;
-        if (options.innerText) element.innerText = options.innerText;
-        if (options.name) element.name = options.name;
-        if (options.placeholder) element.placeholder = options.placeholder;
-        if (options.href) element.href = options.href;
+        sanitizeAndSetId(element, id);
+        if (options.className) element.className = sanitizeString(options.className);
+        if (options.type) element.type = sanitizeString(options.type);
+        if (options.innerText) element.textContent = options.innerText;
+        if (options.name) element.name = sanitizeString(options.name);
+        if (options.placeholder) element.placeholder = sanitizeString(options.placeholder);
+        if (options.href) element.href = options.href; // be careful with defining href...
         if (options.required !== undefined) element.required = options.required;
         if (options.value !== undefined) element.value = options.value;
-        if (options.event && options.fn) {
+        if (options.event && typeof options.event === 'string' && options.fn && typeof options.fn === 'function') {
             element.addEventListener(options.event, options.fn);
         }
         return element;
