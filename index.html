@@ -23701,6 +23701,470 @@ Current version indicated by LITEVER below.
 		}
 	});
 
+    /* Notification banner */
+    window.NotificationCenter = (function() {
+        const requests = new Map();
+        let isInitialized = false;
+        let domElements = null;
+
+        // Security: Limit the number of stored requests to prevent memory exhaustion
+        const MAX_REQUESTS = 1000;
+
+        function ensureInitialized() {
+            if (!isInitialized) {
+                throw new Error('NotificationCenter must be initialized first. Call NotificationCenter.init()');
+            }
+        }
+
+        function createTimeoutPromise(timeoutMs, errorMessage) {
+            return new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error(errorMessage || `Request timeout after ${timeoutMs}ms`));
+                }, timeoutMs);
+            });
+        }
+
+        function fetchWithTimeout(url, options, timeoutMs) {
+            const fetchPromise = fetch(url, options);
+            const timeoutPromise = createTimeoutPromise(timeoutMs, `Request to ${url} timed out after ${timeoutMs}ms`);
+
+            return Promise.race([fetchPromise, timeoutPromise]);
+        }
+
+        function sanitizeUrl(url) {
+            if (typeof url !== 'string') return 'Invalid URL';
+
+            // Remove potential XSS vectors and limit length
+            let sanitized = url.replace(/[<>'"]/g, '').substring(0, 200);
+
+            // Basic URL validation
+            try {
+                const urlObj = new URL(sanitized, window.location.origin);
+                return urlObj.href;
+            } catch (e) {
+                // If not a valid URL, treat as relative path and sanitize
+                return sanitized.replace(/[^\w\-\.\/\?&=]/g, '');
+            }
+        }
+
+        function sanitizeText(text) {
+            if (typeof text !== 'string') return '';
+            // Remove HTML and limit length
+            return text.replace(/[<>]/g, '').substring(0, 500);
+        }
+
+        function createDOMElements() {
+            if (domElements) return domElements;
+
+            try {
+                // Create main container
+                const container = createElementById('div', 'notification-center');
+
+                // Create notification banner
+                const banner = createElementById('div', 'notification-banner', {
+                    className: 'notification-banner hidden'
+                });
+
+                const message = createElementById('span', 'notification-message');
+
+                const closeBtn = createElementById('button', 'notification-close', {
+                    innerText: '×',
+                    type: 'button',
+                    event: 'click',
+                    fn: function(event) {
+                        event.preventDefault();
+                        hideBanner();
+                    }
+                });
+
+                banner.appendChild(message);
+                banner.appendChild(closeBtn);
+
+                // Create toggle button with meaningful ID
+                const badge = createElementById('span', 'notification-badge', {
+                    className: 'badge',
+                    innerText: '0'
+                });
+
+                const toggle = createElementById('div', 'notification-toggle', {
+                    className: 'notification-toggle',
+                    event: 'click',
+                    fn: function(event) {
+                        event.preventDefault();
+                        toggleHistory();
+                    }
+                });
+
+                // Add text node and badge to toggle
+                toggle.appendChild(document.createTextNode('📋 '));
+                toggle.appendChild(badge);
+
+                // Create history panel with unique IDs
+                const historyHeader = createElementById('div', 'notification-history-header', {
+                    className: 'history-header'
+                });
+
+                const historyTitle = createElementById('h3', 'notification-history-title', {
+                    innerText: 'Request History'
+                });
+
+                const historyCloseBtn = createElementById('button', 'notification-history-close', {
+                    innerText: '×',
+                    type: 'button',
+                    event: 'click',
+                    fn: function(event) {
+                        event.preventDefault();
+                        hideHistory();
+                    }
+                });
+
+                historyHeader.appendChild(historyTitle);
+                historyHeader.appendChild(historyCloseBtn);
+
+                const historyList = createElementById('div', 'notification-history-list');
+
+                const history = createElementById('div', 'notification-history', {
+                    className: 'notification-history hidden'
+                });
+
+                history.appendChild(historyHeader);
+                history.appendChild(historyList);
+
+                // Assemble the complete structure
+                container.appendChild(banner);
+                container.appendChild(toggle);
+                container.appendChild(history);
+
+                domElements = {
+                    container: container,
+                    banner: banner,
+                    message: message,
+                    closeBtn: closeBtn,
+                    toggle: toggle,
+                    badge: badge,
+                    history: history,
+                    historyList: historyList,
+                    historyClose: historyCloseBtn
+                };
+
+                return domElements;
+            } catch (error) {
+                console.error('Failed to create notification DOM elements:', error);
+                throw new Error('NotificationCenter: DOM creation failed - ' + error.message);
+            }
+        }
+
+        function showNotification(request) {
+            if (!request || !domElements) return;
+
+            let statusText = '';
+            let className = '';
+
+            // Sanitize all displayed text
+            const safeUrl = sanitizeUrl(request.url);
+            const safeMethod = sanitizeText(request.method);
+
+            switch(request.status) {
+                case 'waiting':
+                    statusText = '⏳ Loading ' + safeMethod + ' ' + safeUrl + '...';
+                    className = 'waiting';
+                    break;
+                case 'success':
+                    statusText = '✅ ' + safeMethod + ' ' + safeUrl + ' completed';
+                    className = 'success';
+                    break;
+                case 'error':
+                    statusText = '❌ ' + safeMethod + ' ' + safeUrl + ' failed';
+                    className = 'error';
+                    break;
+                default:
+                    statusText = '? Unknown status for ' + safeMethod + ' ' + safeUrl;
+                    className = 'unknown';
+            }
+
+            // Safe text assignment (no HTML injection possible)
+            domElements.message.textContent = statusText;
+            domElements.banner.className = 'notification-banner ' + className;
+            domElements.banner.classList.remove('hidden');
+        }
+
+        function hideBanner() {
+            if (!domElements) return;
+            domElements.banner.classList.add('hidden');
+        }
+
+        function updateBadge() {
+            if (!domElements) return;
+            // Safe text assignment with number conversion
+            domElements.badge.textContent = Math.min(requests.size, 999).toString();
+        }
+
+        function createHistoryItem(request) {
+            if (!request) return null;
+
+            try {
+                // Generate unique ID for each history item
+                const historyItemId = 'notification-history-item-' + request.id;
+
+                const historyItem = createElementById('div', historyItemId, {
+                    className: 'history-item ' + sanitizeText(request.status)
+                });
+
+                const historyMain = createElementById('div', historyItemId + '-main', {
+                    className: 'history-main'
+                });
+
+                const statusIcon = createElementById('span', historyItemId + '-icon', {
+                    className: 'status-icon',
+                    innerText: getStatusIcon(request.status)
+                });
+
+                const method = createElementById('span', historyItemId + '-method', {
+                    className: 'method',
+                    innerText: sanitizeText(request.method)
+                });
+
+                const url = createElementById('span', historyItemId + '-url', {
+                    className: 'url',
+                    innerText: sanitizeUrl(request.url)
+                });
+
+                const historyTime = createElementById('div', historyItemId + '-time', {
+                    className: 'history-time',
+                    innerText: formatTime(request.timestamp)
+                });
+
+                historyMain.appendChild(statusIcon);
+                historyMain.appendChild(method);
+                historyMain.appendChild(url);
+
+                historyItem.appendChild(historyMain);
+                historyItem.appendChild(historyTime);
+
+                return historyItem;
+            } catch (error) {
+                console.error('Failed to create history item:', error);
+                return null;
+            }
+        }
+
+        function updateHistory() {
+            if (!domElements) return;
+
+            const requestsArray = [];
+            requests.forEach(function(request) {
+                requestsArray.push(request);
+            });
+
+            requestsArray.reverse();
+
+            // Clear existing history safely
+            while (domElements.historyList.firstChild) {
+                domElements.historyList.removeChild(domElements.historyList.firstChild);
+            }
+
+            // Add each history item safely (limit display to prevent performance issues)
+            const displayLimit = Math.min(requestsArray.length, 100);
+            for (let i = 0; i < displayLimit; i++) {
+                const historyItem = createHistoryItem(requestsArray[i]);
+                if (historyItem) {
+                    domElements.historyList.appendChild(historyItem);
+                }
+            }
+        }
+
+        function showHistory() {
+            updateHistory();
+            if (domElements) {
+                domElements.history.classList.remove('hidden');
+            }
+        }
+
+        function hideHistory() {
+            if (domElements) {
+                domElements.history.classList.add('hidden');
+            }
+        }
+
+        function toggleHistory() {
+            if (!domElements) return;
+            if (domElements.history.classList.contains('hidden')) {
+                showHistory();
+            } else {
+                hideHistory();
+            }
+        }
+
+        function getStatusIcon(status) {
+            const icons = {
+                'waiting': '⏳',
+                'success': '✅',
+                'error': '❌'
+            };
+            return icons[status] || '?';
+        }
+
+        function formatTime(date) {
+            if (!(date instanceof Date)) return 'Invalid Date';
+            try {
+                return date.toLocaleTimeString();
+            } catch (e) {
+                return 'Invalid Time';
+            }
+        }
+
+        function cleanupOldRequests() {
+            if (requests.size > MAX_REQUESTS) {
+                const requestsArray = Array.from(requests.keys());
+                const toRemove = requestsArray.slice(0, requests.size - MAX_REQUESTS);
+                toRemove.forEach(id => requests.delete(id));
+            }
+        }
+
+        function init() {
+            if (isInitialized) {
+                console.warn('NotificationCenter already initialized');
+                return;
+            }
+
+            try {
+                createDOMElements();
+                if (!document.body) {
+                    throw new Error('document.body not available');
+                }
+                document.body.appendChild(domElements.container);
+                isInitialized = true;
+                console.error('NotificationCenter initialized successfully');
+            } catch (error) {
+                console.error('Failed to initialize NotificationCenter:', error);
+                throw error;
+            }
+        }
+
+        // Public API with input validation
+        return {
+            init: function() {
+                init();
+                return this;
+            },
+
+            isReady: function() {
+                return isInitialized;
+            },
+
+            trackRequest: function(url, options) {
+                ensureInitialized();
+
+                // Input validation
+                if (typeof url !== 'string') {
+                    throw new Error('Invalid URL provided to trackRequest - must be string');
+                }
+
+                options = options || {};
+
+                const id = Date.now() + Math.random();
+                const request = {
+                    id: id,
+                    url: sanitizeUrl(url),
+                    status: 'waiting',
+                    timestamp: new Date(),
+                    method: sanitizeText(options.method || 'GET')
+                };
+
+                requests.set(id, request);
+                showNotification(request);
+                updateBadge();
+                cleanupOldRequests();
+
+                return id;
+            },
+
+            updateRequest: function(id, status, data) {
+                ensureInitialized();
+
+                if (typeof id !== 'number' && typeof id !== 'string') {
+                    throw new Error('Invalid request ID provided - must be number or string');
+                }
+
+                const request = requests.get(id);
+                if (!request) {
+                    console.warn('Request not found:', id);
+                    return;
+                }
+
+                const validStatuses = ['waiting', 'success', 'error'];
+                if (!validStatuses.includes(status)) {
+                    throw new Error('Invalid status provided: ' + status + '. Valid: ' + validStatuses.join(', '));
+                }
+
+                request.status = status;
+                request.completedAt = new Date();
+                if (data && typeof data === 'object') {
+                    request.data = data;
+                }
+
+                requests.set(id, request);
+                showNotification(request);
+                updateBadge();
+                updateHistory();
+            },
+
+            fetch: function(url, options) {
+                ensureInitialized();
+
+                if (typeof url !== 'string') {
+                    return Promise.reject(new Error('Invalid URL provided to fetch - must be string'));
+                }
+
+                options = options || {};
+
+                // Add default timeout if not specified
+                const timeoutMs = options.timeout || 2000; // default timeout is 2s
+
+                const id = this.trackRequest(url, options);
+                if (!id) {
+                    return Promise.reject(new Error('Failed to track request'));
+                }
+
+                const self = this;
+
+                // Use timeout-enabled fetch
+                return fetchWithTimeout(url, options, timeoutMs)
+                    .then(function(response) {
+                        if (response.ok) {
+                            self.updateRequest(id, 'success', { status: response.status });
+                        } else {
+                            self.updateRequest(id, 'error', { status: response.status });
+                        }
+                        return response;
+                    })
+                    .catch(function(error) {
+                    const errorData = {
+                        error: error.message,
+                        type: error.name,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    if (error.message.includes('timeout')) {
+                        errorData.isTimeout = true;
+                    }
+
+                    self.updateRequest(id, 'error', errorData);
+                        throw error;
+                    });
+            },
+
+            // Utility methods
+            hideBanner: hideBanner,
+            showHistory: showHistory,
+            hideHistory: hideHistory,
+            toggleHistory: toggleHistory,
+            setDefaultTimeout: function(timeoutMs) {
+                this.defaultTimeout = timeoutMs;
+            }
+        };
+    })();
+
     /* Thesaurus custom entries functionality */
     const thesaurusCustomStatus = {
         countPlus: 0
@@ -23808,9 +24272,13 @@ Current version indicated by LITEVER below.
         thesaurusCustomFormGroups.append(customFormNth)
     }
     function openThesaurusCustomForm() {
+        NotificationCenter.hideBanner()
         showElementById("thesaurus-custom-form-container")
     }
-    function closeThesaurusCustomForm() {
+    function closeThesaurusCustomForm(closeBanner=true) {
+        if (closeBanner) {
+            NotificationCenter.hideBanner()
+        }
         const customFormGroups = document.getElementById("thesaurus-custom-form-groups")
         customFormGroups.replaceChildren()
         document.getElementById("thesaurus-custom-word").value = ""
@@ -23875,29 +24343,22 @@ Current version indicated by LITEVER below.
         try {
             const thesaurusDomainElement = document.getElementById("wordsearch_thesaurus_endpoint")
             const thesaurusDomain = thesaurusDomainElement.value || localsettings.wordsearch_thesaurus_endpoint;
-            const response = await fetch(`${thesaurusDomain}/thesaurus-custom`, {
+            const response = await NotificationCenter.fetch(`${thesaurusDomain}/thesaurus-custom`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(requestBody)
+
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                hideElementById("id-rightpanel-thesaurus-waiting");
-                showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "error on fetching synonym response.")
                 throw new Error(`HTTP error! status: '${response.status}', message: '${errorData.detail}'`);
             }
-
-            // Success message and close form
-            console.log("new thesaurus custom entry:", await response.json(), "#")
-            alert("Thesaurus entry added successfully!"); // Provide user feedback
-            closeThesaurusCustomForm()
+            closeThesaurusCustomForm(false)
         } catch (error) {
             console.error('fetchSynonymsWithContext::Error fetching synonyms:', error, "#");
-            hideElementById("id-rightpanel-thesaurus-waiting");
-            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "unespected error on fetching synonym response.")
             throw error;
         }
     }
@@ -23983,6 +24444,7 @@ Current version indicated by LITEVER below.
     }
 
     async function openThesaurus() {
+        NotificationCenter.hideBanner()
         showElementById("id-rightpanel-thesaurus")
 
         const iseditable = document.getElementById("allowediting")
@@ -24022,8 +24484,6 @@ Current version indicated by LITEVER below.
 
     function parseInflatedSynonymPhraseResponse(response) {
         if (!response || !response.success) {
-            hideElementById("id-rightpanel-thesaurus-waiting");
-            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "error on parsing phrase response.")
             throw new Error(response?.message || 'Invalid phrase response format');
         }
 
@@ -24141,7 +24601,7 @@ Current version indicated by LITEVER below.
             containerNth.appendChild(groupDiv);
         });
 
-        // Debug info (optional, can be hidden in production)
+        // Debug info (optional)
         if (result.debugInfo) {
            const debugDiv = createElementById("div", `debug-div-${i}`, {className: "thesaurus-debug-info", style: "font-size: 0.8em; color: #666;"});
             const details = createElementById("details", `details-${i}`);
@@ -24230,6 +24690,7 @@ Current version indicated by LITEVER below.
     }
 
     function confirmSynonymButton() {
+        // NotificationCenter.hideBanner()
         const iseditable = document.getElementById("allowediting")
         if (iseditable.checked) {
             // Check which workflow is active
@@ -24383,6 +24844,7 @@ Current version indicated by LITEVER below.
             // but only if not changing the editable mode
             render_gametext(false, false);
         }
+        NotificationCenter.init();
         const searchBox = document.getElementById("wordsearch_input");
         const resultsContainer = document.getElementById("wordsearch_results");
         const sortByFreq = document.getElementById("wordsearch_sort").value === "0";
@@ -24484,7 +24946,7 @@ Current version indicated by LITEVER below.
             const thesaurusDomainElement = document.getElementById("wordsearch_thesaurus_endpoint")
             const thesaurusDomain = thesaurusDomainElement.value || localsettings.wordsearch_thesaurus_endpoint;
 
-            const response = await fetch(`${thesaurusDomain}/thesaurus-inflated-phrase`, {
+            const response = await NotificationCenter.fetch(`${thesaurusDomain}/thesaurus-inflated-phrase`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -24494,15 +24956,11 @@ Current version indicated by LITEVER below.
 
             if (!response.ok) {
                 const errorData = await response.json();
-                hideElementById("id-rightpanel-thesaurus-waiting");
-                showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "error on fetching synonym response.")
                 throw new Error(`HTTP error! status: '${response.status}', message: '${errorData.detail}'`);
             }
             return await response.json();
         } catch (error) {
             console.error('fetchSynonymsWithContext::Error fetching synonyms:', error, "#");
-            hideElementById("id-rightpanel-thesaurus-waiting");
-            showElementById("id-rightpanel-thesaurus-error", defaultErrorText, "unespected error on fetching synonym response.")
             throw error;
         }
     }
@@ -24676,7 +25134,7 @@ Current version indicated by LITEVER below.
                     contentData.appendChild(synonymUI);
                 } catch (error) {
                     console.error('createResultButton::Error in result button click handler:', error, "#");
-                    alert('Failed to fetch smart synonyms. Please try again.');
+                    throw error
                 }
             };
 
@@ -24698,13 +25156,13 @@ Current version indicated by LITEVER below.
     async function getSingleSentence(text, start, end, word) {
         const urlSpitText = `${localsettings.wordsearch_thesaurus_endpoint}/split-text`
         const body = {text, end, start, word}
-        const targetSentenceResponse = await fetch(urlSpitText, {
+        const targetSentenceResponse = await NotificationCenter.fetch(urlSpitText, {
             body: JSON.stringify(body),
             "method": "POST",
             "mode": "cors",
             "credentials": "omit"
         })
-        if (targetSentenceResponse.status !== 200) {
+        if (!targetSentenceResponse.ok) {
             console.error("createResultButton::targetSentenceResponse.data on Error:")
             console.error(targetSentenceResponse.data)
             throw Error(`Errror: request from ${urlSpitText} returned status ${targetSentenceResponse.status}!`)
@@ -25015,6 +25473,389 @@ Current version indicated by LITEVER below.
                 margin-bottom: 2px;
             }
         }
+
+        /* notification banner */
+        /* Notification Center Styles */
+        #notification-center {
+            position: fixed;
+            bottom: 0;
+            right: 0;
+            z-index: 1;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            max-width: 400px;
+        }
+
+        /* Notification Banner */
+        .notification-banner {
+            padding: 12px 16px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #007bff;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification-banner.hidden {
+            display: none;
+        }
+
+        .notification-banner.waiting {
+            border-left-color: #ffc107;
+            background: #fff9e6;
+        }
+
+        .notification-banner.success {
+            border-left-color: #28a745;
+            background: #e8f5e8;
+        }
+
+        .notification-banner.error {
+            border-left-color: #dc3545;
+            background: #ffe6e6;
+        }
+
+        .notification-banner.unknown {
+            border-left-color: #6c757d;
+            background: #f8f9fa;
+        }
+
+        #notification-message {
+            flex: 1;
+            margin-right: 10px;
+            word-break: break-word;
+        }
+
+        #notification-close {
+            background: none;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s ease;
+        }
+
+        #notification-close:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+
+        /* Toggle Button */
+        .notification-toggle {
+            background: #007bff;
+            color: white;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            user-select: none;
+            margin-bottom: 10px;
+        }
+
+        .notification-toggle:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+        }
+
+        .notification-toggle:active {
+            transform: translateY(0);
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.9);
+            color: #007bff;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 18px;
+            text-align: center;
+        }
+
+        /* History Panel */
+        .notification-history {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            max-height: 400px;
+            overflow: hidden;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification-history.hidden {
+            display: none;
+        }
+
+        .history-header {
+            background: #f8f9fa;
+            padding: 16px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #notification-history-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        #notification-history-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s ease;
+            color: #6c757d;
+        }
+
+        #notification-history-close:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+            color: #495057;
+        }
+
+        #notification-history-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* History Items */
+        .history-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f1f3f4;
+            transition: background-color 0.2s ease;
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .history-item.waiting {
+            border-left: 3px solid #ffc107;
+        }
+
+        .history-item.success {
+            border-left: 3px solid #28a745;
+        }
+
+        .history-item.error {
+            border-left: 3px solid #dc3545;
+        }
+
+        .history-item.unknown {
+            border-left: 3px solid #6c757d;
+        }
+
+        .history-main {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .status-icon {
+            font-size: 14px;
+            width: 16px;
+            text-align: center;
+        }
+
+        .method {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #495057;
+            text-transform: uppercase;
+        }
+
+        .url {
+            flex: 1;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            color: #495057;
+            word-break: break-all;
+        }
+
+        .history-time {
+            font-size: 11px;
+            color: #6c757d;
+            text-align: right;
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        /* Scrollbar Styling */
+        #notification-history-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #notification-history-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        #notification-history-list::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        #notification-history-list::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            #notification-center {
+                bottom: 0;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+
+            .notification-banner {
+                padding: 10px 12px;
+            }
+
+            .notification-toggle {
+                padding: 8px 12px;
+            }
+
+            .notification-history {
+                max-height: 300px;
+            }
+
+            #notification-history-list {
+                max-height: 200px;
+            }
+        }
+
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .notification-banner {
+                background: #2d3748;
+                color: #e2e8f0;
+            }
+
+            .notification-banner.waiting {
+                background: #2d2d1a;
+            }
+
+            .notification-banner.success {
+                background: #1a2d1a;
+            }
+
+            .notification-banner.error {
+                background: #2d1a1a;
+            }
+
+            .notification-history {
+                background: #2d3748;
+                color: #e2e8f0;
+            }
+
+            .history-header {
+                background: #4a5568;
+                border-bottom-color: #718096;
+            }
+
+            #notification-history-title {
+                color: #e2e8f0;
+            }
+
+            .history-item {
+                border-bottom-color: #4a5568;
+            }
+
+            .history-item:hover {
+                background-color: #4a5568;
+            }
+
+            .method {
+                background: #4a5568;
+                color: #e2e8f0;
+            }
+
+            .url {
+                color: #cbd5e0;
+            }
+
+            .history-time {
+                color: #a0aec0;
+            }
+        }
+
+        /* High contrast mode */
+        @media (prefers-contrast: high) {
+            .notification-banner {
+                border-width: 2px;
+                border-style: solid;
+            }
+
+            .notification-banner.waiting {
+                border-color: #ffc107;
+            }
+
+            .notification-banner.success {
+                border-color: #28a745;
+            }
+
+            .notification-banner.error {
+                border-color: #dc3545;
+            }
+
+            .notification-toggle {
+                border: 2px solid #007bff;
+            }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            .notification-banner,
+            .notification-history,
+            .notification-toggle {
+                animation: none;
+                transition: none;
+            }
+        }
+        /* end notification banner */
 
         @media (max-width: 666px) {
             #thesaurus-custom-button-external,
