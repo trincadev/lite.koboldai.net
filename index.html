@@ -24249,7 +24249,7 @@ Current version indicated by LITEVER below.
         label.htmlFor = `thesaurus-custom-related-type-${n}nth`
 
         const select = createElementById("select", `thesaurus-custom-related-type-${n}nth`, {className: "form-control", name:`thesaurus-custom-related-type-${n}nth`})
-        const optionsArray = ["synonym", "antonym", "homonym", "homophone", "homograph"];
+        const optionsArray = Object.keys(RELATION_TITLES);
         optionsArray.forEach(text => {
             const option = createElementById("option", `thesaurus-custom-related-type-${n}nth-${text}`, {
                 className:"text-transform-capitalize", innerText: toPascalCase(text), value:text
@@ -24364,15 +24364,31 @@ Current version indicated by LITEVER below.
     }
 
     /* Thesaurus functionality */
-    const mapWordsAPIlists = {
-        "synonyms": 'Synonyms:',
-        "typeOf": 'Type Of:',
-        "hasTypes": 'Has Types:',
-        "verbGroup": 'Verb Group:',
-        "entails": 'Entails:',
-        "also": 'Also:',
-        "derivation": 'Derivation:'
-    }
+    /**
+     * A mapping from the API's technical relation_type to a clean,
+     * user-friendly title for display in the UI. This is the single
+     * source of truth for relationship naming.
+     */
+    const RELATION_TITLES = {
+        // Currently active and supported relations
+        "synonym": "Synonyms",
+        "antonym": "Antonyms",
+        "hypernym": "Broader Terms",      // e.g., for "poodle" -> "dog"
+        "hyponym": "Specific Kinds",     // e.g., for "dog" -> "poodle"
+        "holonym": "Is a Part Of",         // e.g., for "finger" -> "hand"
+        "meronym": "Has Parts",          // e.g., for "hand" -> "finger"
+        "similar_to": "Similar Terms",
+        "also_see": "See Also",
+        "cause": "Causes",
+        /*
+         * The following relations are defined in the backend but are
+         * currently disabled. They are included here for future-proofing.
+         * Simply uncomment them when they become available.
+         */
+        // "derivationally_related_form": "Related Word Forms",
+        // "entailment": "Implies",
+        // "pertainym": "Pertains To",
+    };
     const mapWordsAPIsimple = {
         "definition": "Definition:"
     }
@@ -24488,23 +24504,35 @@ Current version indicated by LITEVER below.
         }
 
         const parsedResults = response.results.map(result => {
-            // Manually map the snake_case properties from the Python backend
+        // Map related_word_groups to synonymGroups
+        const synonymGroups = (result.related_word_groups || []).map(group => ({
+            definition: group.definition,
+            examples: group.examples,
+            wordnetPos: group.wordnet_pos,
+            // Map related_words to synonyms
+            synonyms: (group.related_words || []).map(word => ({
+                baseForm: word.base_form,
+                inflectedForm: word.inflected_form,
+                matchesContext: word.matches_context
+            })),
+            // Add relation_type for UI
+            relationType: group.relation_type
+        }));
             return {
                 originalWord: result.original_word,
                 originalIndices: result.original_indices,
                 contextInfo: result.context_info,
-                synonymGroups: result.synonym_groups,
-                debugInfo: result.debug_info,
-                message: result.message
+            synonymGroups,
+            debugInfo: result.debug_info
             };
         });
 
         return {
-            success: response.success,
             originalPhrase: response.original_phrase,
             originalIndices: response.original_indices,
             results: parsedResults,
-            message: response.message
+        message: response.message,
+        duration: response.duration
         };
     }
 
@@ -24527,7 +24555,7 @@ Current version indicated by LITEVER below.
         const originalWordSpan = createElementById("span", `thesaurus-original-word-span-${i}nth`, {className:"thesaurus-original-word-span", innerText:`${result.originalWord}`})
 
         const headerTitle = document.createElement("h2");
-        headerTitle.textContent = `Smart Synonyms for `;
+        headerTitle.textContent = `Related Words for `;
         headerTitle.appendChild(originalWordSpan)
 
         const contextInfoDiv = createElementById("div", `context-info-div-${i}nth`, {className: "context-info"})
@@ -24538,84 +24566,97 @@ Current version indicated by LITEVER below.
         ]);
         header.append(headerTitle, contextInfoDiv);
         containerNth.appendChild(header);
-
-        // Check if no synonyms found
+        // Check if no related words found
         if (!result.synonymGroups || result.synonymGroups.length === 0) {
-            const noSynonyms = createElementById("div", `no-synonyms-${i}nth`, {className: "no-synonyms-message"});
-            const noSynonymsP = createElementById("p", `no-synonyms-p-${i}nth`, {innerText: result.message || "No synonyms found for this word."});
-            noSynonyms.appendChild(noSynonymsP);
-            containerNth.appendChild(noSynonyms);
+            const noRelatedWords = createElementById("div", `no-related-words-${i}nth`, {className: "no-synonyms-message"});
+            const noRelatedWordsP = createElementById("p", `no-related-words-p-${i}nth`, {innerText: result.message || "No related words found for this word."});
+            noRelatedWords.appendChild(noRelatedWordsP);
+            containerNth.appendChild(noRelatedWords);
             return containerNth;
         }
-
-        // Synonym groups
+        // Group words by relation type
         result.synonymGroups.forEach((group, groupIndex) => {
-           const groupDiv = createElementById("div", `inflated-synonym-group-${i}-${groupIndex}`,{className: "inflated-synonym-group"});
+            const relationDiv = createElementById("div", `relation-group-${i}-${groupIndex}nth`, {className: "relation-group"});
 
-            insertSeparator(groupDiv);
-            createParagraphWithStrongByObjArray(i, groupDiv, [
-                {k:"definition", innerText:"Definition:", textNode: ` ${group.definition}`},
-                {k:"examples", innerText:"Examples:", textNode: group.examples && group.examples.length > 0 ? ` ${group.examples.join('; ')}` : ""},
-                {k:"pos-info", innerText:"WordNet POS:", textNode: ` ${group.wordnet_pos}`}
-            ], ["div", "strong"])
+            // Create relation type header
+            const relationTypeHeader = createElementById("div", `relation-type-header-${i}-${groupIndex}nth`, {className: "relation-type-header"});
+            const relationTypeTitle = createElementById("h3", `relation-type-${i}-${groupIndex}nth`, {
+                className: "relation-type-title",
+                innerText: RELATION_TITLES[group.relationType] || toPascalCase(group.relationType)
+            });
+            relationTypeHeader.appendChild(relationTypeTitle);
 
-            // Synonyms list with inflected forms
-            const synonymsList = createElementById("div", `synonyms-list-div-${i}-${groupIndex}`,{className: "inflated-synonyms-list"});
-            const synonymsTitle = createElementById("h4", `synonyms-title-${i}-${groupIndex}`, {innerText:"Available Synonyms:"});
-            synonymsList.appendChild(synonymsTitle);
+            // Add definition if present
+            if (group.definition) {
+                const definitionP = createElementById("p", `definition-${i}-${groupIndex}nth`, {className: "definition"});
+                const definitionStrong = createElementById("strong", `definition-label-${i}-${groupIndex}nth`, {innerText: "Definition:"});
+                definitionP.append(definitionStrong, document.createTextNode(` ${group.definition}`));
+                relationTypeHeader.appendChild(definitionP);
+            }
 
-            group.synonyms.forEach((synonym, synonymIndex) => {
-                const synonymContainer = createElementById("div", `synonym-container-${i}-${groupIndex}-${synonymIndex}`, {className: "synonym-option-container"});
-                const synonymButton = createElementById("button", `synonym-button-${i}-${groupIndex}-${synonymIndex}`, {className: "inflated-synonym-option"});
+            // Add examples if present
+            if (group.examples && group.examples.length > 0) {
+                const examplesP = createElementById("p", `examples-${i}-${groupIndex}nth`, {className: "examples"});
+                const examplesStrong = createElementById("strong", `examples-label-${i}-${groupIndex}nth`, {innerText: "Examples:"});
+                examplesP.appendChild(examplesStrong);
+                group.examples.forEach((example, exampleIndex) => {
+                    examplesP.appendChild(document.createTextNode(` ${example}${exampleIndex < group.examples.length - 1 ? ';' : ''}`));
+                });
+                relationTypeHeader.appendChild(examplesP);
+            }
+
+            // Create container for related words
+            const wordsContainer = createElementById("div", `words-container-${i}-${groupIndex}nth`, {className: "words-container"});
+
+            // Add related words with proper container structure
+            group.synonyms.forEach((word, wordIndex) => {
+                const synonymContainer = createElementById("div", `synonym-container-${i}-${groupIndex}-${wordIndex}`, {
+                    className: "synonym-option-container"
+                });
+                const synonymButton = createElementById("button", `synonym-button-${i}-${groupIndex}-${wordIndex}`, {
+                    className: "inflated-synonym-option"
+                });
                 synonymButton.setAttribute("data-group", groupIndex);
-                synonymButton.setAttribute("data-synonym", synonymIndex);
+                synonymButton.setAttribute("data-synonym", wordIndex);
 
                 // Show inflected form prominently, base form as reference
-                if (synonym.matches_context && synonym.inflected_form !== synonym.base_form) {
-                    const inflectedSpan = createElementById("span", `inflected-span-${i}-${groupIndex}-${synonymIndex}`,{className: "inflected-form", innerText: synonym.inflected_form});
-                    const baseSpan = createElementById("span", `base-span-${i}-${groupIndex}-${synonymIndex}`, {className: "base-form", innerText:`(from: ${synonym.base_form})`});
-                    const contextSpan = createElementById("span", `context-span-${i}-${groupIndex}-${synonymIndex}`,{className: "context-match", innerText:"✓ context-matched"});
+                if (word.matches_context && word.inflectedForm !== word.baseForm) {
+                    const inflectedSpan = createElementById("span", `inflected-span-${i}-${groupIndex}-${wordIndex}`,
+                        {className: "inflected-form", innerText: word.inflectedForm});
+                    const baseSpan = createElementById("span", `base-span-${i}-${groupIndex}-${wordIndex}`,
+                        {className: "base-form", innerText: `(from: ${word.baseForm})`});
+                    const contextSpan = createElementById("span", `context-span-${i}-${groupIndex}-${wordIndex}`,
+                        {className: "context-match", innerText: "✓ context-matched"});
                     synonymButton.append(inflectedSpan, baseSpan, contextSpan);
                 } else {
-                    const inflectedSpan = createElementById("span", `inflected-span-${i}-${groupIndex}-${synonymIndex}`, {className: "inflected-form", innerText:synonym.inflected_form});
+                    const inflectedSpan = createElementById("span", `inflected-span-${i}-${groupIndex}-${wordIndex}`,
+                        {className: "inflected-form", innerText: word.inflectedForm});
                     synonymButton.appendChild(inflectedSpan);
                 }
-
                 // Apply the synonym when clicked, but only if #allowediting checked
-                const iseditable = document.getElementById("allowediting")
+                const iseditable = document.getElementById("allowediting");
                 if (!iseditable.checked) {
-                    synonymButton.disabled = true
+                    synonymButton.disabled = true;
                 }
                 synonymButton.setAttribute("data-original-word", result.originalWord);
                 synonymButton.addEventListener("click", () => {
-                    const {start, end} = result.originalIndices
+                    const {start, end} = result.originalIndices;
                     // Pass the button element itself for styling
-                    populateSynonymInput(synonym.inflected_form, result.originalWord, start, end, synonymButton)
+                    populateSynonymInput(word.inflectedForm, result.originalWord, start, end, synonymButton);
                 });
-
                 synonymContainer.appendChild(synonymButton);
-                synonymsList.appendChild(synonymContainer);
+                wordsContainer.appendChild(synonymContainer);
             });
 
-            groupDiv.appendChild(synonymsList);
-            containerNth.appendChild(groupDiv);
+            relationDiv.append(relationTypeHeader, wordsContainer);
+            containerNth.appendChild(relationDiv);
+
+            // Add separator between groups
+            if (groupIndex < result.synonymGroups.length - 1) {
+                insertSeparator(containerNth);
+            }
         });
 
-        // Debug info (optional)
-        if (result.debugInfo) {
-           const debugDiv = createElementById("div", `debug-div-${i}`, {className: "thesaurus-debug-info", style: "font-size: 0.8em; color: #666;"});
-            const details = createElementById("details", `details-${i}`);
-            const summary = createElementById("summary", `summary-${i}`, {innerText:"Debug Information"});
-            details.appendChild(summary);
-            createParagraphWithStrongByObjArray(i, details, [
-                {k:"orig-indices", innerText:"Original Indices:", textNode:` ${result.originalIndices.start}-${result.originalIndices.end}`},
-                {k:"spacy-indices", innerText:"SpaCy Token Indices:", textNode:` ${result.debugInfo.spacy_token_indices.start}-${result.debugInfo.spacy_token_indices.end}`},
-                {k:"lemma", innerText:"Lemma:", textNode:` ${result.debugInfo.lemma}`}
-            ]);
-
-            debugDiv.appendChild(details);
-            containerNth.appendChild(debugDiv);
-        }
         return containerNth;
     }
 
@@ -25399,6 +25440,28 @@ Current version indicated by LITEVER below.
             content: "'";
         }
 
+        .relation-group {
+            margin-bottom: 20px;
+        }
+
+        .relation-type-header {
+            margin: 15px 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .relation-type-title {
+            font-size: 1.1em;
+            margin: 0 0 8px 0;
+        }
+
+        .words-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
         /* thesaurus custom entries */
         #thesaurus-custom-word {
             margin: 10px 0 10px 0;
@@ -26095,9 +26158,16 @@ Current version indicated by LITEVER below.
                                                         <select id="thesaurus-custom-related-type-0nth" name="thesaurus-custom-related-type-0nth" aria-label="thesaurus-custom-related-type-0nth" class="form-control" data-testid="thesaurus-custom-related-type-0nth">
                                                             <option value="synonym">Synonym</option>
                                                             <option value="antonym">Antonym</option>
-                                                            <option value="homonym">Homonym</option>
-                                                            <option value="homophone">Homophone</option>
-                                                            <option value="homograph">Homograph</option>
+                                                            <option value="hypernym">Hypernym</option>
+                                                            <option value="hyponym">Hyponym</option>
+                                                            <option value="holonym">Holonym</option>
+                                                            <option value="meronym">Meronym</option>
+                                                            <option value="similar_to">Similar to</option>
+                                                            <option value="also_see">Also see</option>
+                                                            <option value="cause">Cause</option>
+                                                            <option value="derivationally_related_form" disabled>Derivationally rel...(disabled)</option>
+                                                            <option value="entailment" disabled>Entailment (disabled)</option>
+                                                            <option value="pertainym" disabled>Pertainym (disabled)</option>
                                                         </select>
                                                     </div>
                                                     <textarea type="text" id="thesaurus-custom-related-words-0nth" name="thesaurus-custom-related-words" aria-label="thesaurus-custom-related-words-0nth" placeholder="Related words (required)" required class="form-control menuinput_inline" data-testid="thesaurus-custom-related-words-0nth"></textarea>
