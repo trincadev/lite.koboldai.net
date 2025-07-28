@@ -24588,7 +24588,7 @@ Current version indicated by LITEVER below.
 
             // Add definition if present
             if (group.definition) {
-                const definitionP = createElementById("p", `definition-${i}-${groupIndex}nth`, {className: "definition"});
+                const definitionP = createElementById("p", `definition-div-${i}-${groupIndex}nth`, {className: "definition"});
                 const definitionStrong = createElementById("strong", `definition-label-${i}-${groupIndex}nth`, {innerText: "Definition:"});
                 definitionP.append(definitionStrong, document.createTextNode(` ${group.definition}`));
                 relationTypeHeader.appendChild(definitionP);
@@ -24620,7 +24620,7 @@ Current version indicated by LITEVER below.
                 synonymButton.setAttribute("data-synonym", wordIndex);
 
                 // Show inflected form prominently, base form as reference
-                if (word.matches_context && word.inflectedForm !== word.baseForm) {
+                if (word.matchesContext && word.inflectedForm !== word.baseForm) {
                     const inflectedSpan = createElementById("span", `inflected-span-${i}-${groupIndex}-${wordIndex}`,
                         {className: "inflected-form", innerText: word.inflectedForm});
                     const baseSpan = createElementById("span", `base-span-${i}-${groupIndex}-${wordIndex}`,
@@ -24657,6 +24657,23 @@ Current version indicated by LITEVER below.
             }
         });
 
+        // Debug info (optional)
+        if (result.debugInfo) {
+            const debugDiv = createElementById("div", `debug-div-${i}`, {className: "thesaurus-debug-info", style: "font-size: 0.8em; color: #666;"});
+            const details = createElementById("details", `details-${i}`);
+            const summary = createElementById("summary", `summary-${i}`, {innerText:"Debug Information"});
+            details.appendChild(summary);
+            const detailsContainer = createElementById("div", `details-container-${i}`, {className: "details-container-thesaurus"});
+            createParagraphWithStrongByObjArray(i, detailsContainer, [
+                {k:"orig-indices", innerText:"Original Indices:", textNode:` ${result.originalIndices.start}-${result.originalIndices.end}`},
+                {k:"spacy-indices", innerText:"SpaCy Token Indices:", textNode:` ${result.debugInfo.spacy_token_indices.start}-${result.debugInfo.spacy_token_indices.end}`},
+                {k:"lemma", innerText:"Lemma:", textNode:` ${result.debugInfo.lemma}`}
+            ]);
+
+            details.appendChild(detailsContainer);
+            debugDiv.appendChild(details);
+            containerNth.appendChild(debugDiv);
+        }
         return containerNth;
     }
 
@@ -25506,6 +25523,10 @@ Current version indicated by LITEVER below.
         #thesaurus-synonym-mod-input {
             width: calc(100% - 100px);
             margin:2px;
+        }
+        .details-container-thesaurus p {
+            margin: 2px 2px 2px 24px;
+            font-size: small;
         }
         /* Thesaurus form for custom entries */
         #id-thesaurus-container h1,
